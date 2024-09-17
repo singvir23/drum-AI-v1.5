@@ -9,7 +9,7 @@ function App() {
         <h1>AI Sheet Music Generator</h1>
         <MusicSheet />
       </header>
-    </div>
+    </div> //hello I love cats
   );
 }
 
