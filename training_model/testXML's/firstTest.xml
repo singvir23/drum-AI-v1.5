@@ -51,26 +51,20 @@
         <beam number="1">continue</beam>
       </note>
       <note>
-        <rest />
-        <duration>2</duration>
+        <unpitched>
+          <display-step>C</display-step>
+          <display-octave>5</display-octave>
+        </unpitched>
+        <duration>1</duration>
         <voice>1</voice>
-        <type>eighth</type>
-        <beam number="1">end</beam>
+        <type>16th</type>
+        <stem>up</stem>
+        <lyric number="1">
+          <syllabic>single</syllabic>
+          <text>R</text>
+        </lyric>
+        <beam number="1">continue</beam>
       </note>
-      <note>
-        <rest />
-        <duration>8</duration>
-        <voice>1</voice>
-        <type>half</type>
-      </note>
-      <note>
-        <rest />
-        <duration>4</duration>
-        <voice>1</voice>
-        <type>quarter</type>
-      </note>
-    </measure>
-    <measure number="2">
       <note>
         <unpitched>
           <display-step>C</display-step>
@@ -84,7 +78,37 @@
           <syllabic>single</syllabic>
           <text>R</text>
         </lyric>
+        <beam number="1">end</beam>
+      </note>
+      <note>
+        <unpitched>
+          <display-step>C</display-step>
+          <display-octave>5</display-octave>
+        </unpitched>
+        <duration>1</duration>
+        <voice>1</voice>
+        <type>16th</type>
+        <stem>up</stem>
+        <lyric number="1">
+          <syllabic>single</syllabic>
+          <text>L</text>
+        </lyric>
         <beam number="1">begin</beam>
+      </note>
+      <note>
+        <unpitched>
+          <display-step>C</display-step>
+          <display-octave>5</display-octave>
+        </unpitched>
+        <duration>1</duration>
+        <voice>1</voice>
+        <type>16th</type>
+        <stem>up</stem>
+        <lyric number="1">
+          <syllabic>single</syllabic>
+          <text>R</text>
+        </lyric>
+        <beam number="1">continue</beam>
       </note>
       <note>
         <unpitched>
@@ -112,74 +136,9 @@
         <stem>up</stem>
         <lyric number="1">
           <syllabic>single</syllabic>
-          <text>R</text>
-        </lyric>
-        <beam number="1">continue</beam>
-      </note>
-      <note>
-        <unpitched>
-          <display-step>C</display-step>
-          <display-octave>5</display-octave>
-        </unpitched>
-        <duration>1</duration>
-        <voice>1</voice>
-        <type>16th</type>
-        <stem>up</stem>
-        <lyric number="1">
-          <syllabic>single</syllabic>
           <text>L</text>
         </lyric>
         <beam number="1">end</beam>
-      </note>
-      <note>
-        <rest />
-        <duration>8</duration>
-        <voice>1</voice>
-        <type>half</type>
-      </note>
-      <note>
-        <rest />
-        <duration>4</duration>
-        <voice>1</voice>
-        <type>quarter</type>
-      </note>
-    </measure>
-    <measure number="3">
-      <note>
-        <unpitched>
-          <display-step>C</display-step>
-          <display-octave>5</display-octave>
-        </unpitched>
-        <duration>2</duration>
-        <voice>1</voice>
-        <type>eighth</type>
-        <stem>up</stem>
-        <lyric number="1">
-          <syllabic>single</syllabic>
-          <text>R</text>
-        </lyric>
-        <beam number="1">begin</beam>
-      </note>
-      <note>
-        <unpitched>
-          <display-step>C</display-step>
-          <display-octave>5</display-octave>
-        </unpitched>
-        <duration>2</duration>
-        <voice>1</voice>
-        <type>eighth</type>
-        <stem>up</stem>
-        <lyric number="1">
-          <syllabic>single</syllabic>
-          <text>L</text>
-        </lyric>
-        <beam number="1">end</beam>
-      </note>
-      <note>
-        <rest />
-        <duration>4</duration>
-        <voice>1</voice>
-        <type>quarter</type>
       </note>
       <note>
         <rest />

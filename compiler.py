@@ -1,4 +1,8 @@
+#!/usr/bin/env python3
+
+import sys
 import xml.etree.ElementTree as ET
+from xml.dom import minidom
 
 # Duration mappings for different note types (in divisions)
 # W = whole note (16 divisions)
@@ -42,17 +46,24 @@ def parse_note(token):
     }
 
     if is_rest(token):
+        # token like 'RW', 'RH', etc.
+        if len(token) < 2:
+            raise ValueError(f"Invalid rest token: '{token}'")
         duration_char = token[1]
         note_info['rest'] = True
-        note_info['duration_divisions'] = DURATION_MAP[duration_char]
+        note_info['duration_divisions'] = DURATION_MAP.get(duration_char, 4)  # default quarter if unknown
         note_info['type'] = xml_note_type(duration_char)
         return note_info
 
-    duration_char = token[0]
-    note_info['duration_divisions'] = DURATION_MAP[duration_char]
-    note_info['type'] = xml_note_type(duration_char)
-    note_info['sticking'] = token[1]
+    if len(token) < 2:
+        raise ValueError(f"Invalid note token: '{token}'")
 
+    duration_char = token[0]
+    note_info['duration_divisions'] = DURATION_MAP.get(duration_char, 4)
+    note_info['type'] = xml_note_type(duration_char)
+    # Sticking is next char
+    note_info['sticking'] = token[1]
+    # Embellishments are any remaining chars
     if len(token) > 2:
         note_info['embellishments'] = list(token[2:])
     return note_info
@@ -91,9 +102,10 @@ def normalize_measure_duration(measure_tokens, target_divisions=16):
     # Calculate current measure duration and keep tokens that fit
     for token in measure_tokens:
         note_info = parse_note(token)
+        if current_divisions + note_info['duration_divisions'] > target_divisions:
+            break  # Stop adding notes that exceed the measure
+        normalized_tokens.append(token)
         current_divisions += note_info['duration_divisions']
-        if current_divisions <= target_divisions:
-            normalized_tokens.append(token)
     
     # If under-filled, add rests
     if current_divisions < target_divisions:
@@ -151,7 +163,7 @@ def add_grace_note_before(measure):
     grace = ET.SubElement(note_el, 'grace', slash="yes")
     create_unpitched_elements(note_el)
     dur = ET.SubElement(note_el, 'duration')
-    dur.text = '1'  # minimal placeholder, no real timing
+    dur.text = '1'  # minimal placeholder
     voice = ET.SubElement(note_el, 'voice')
     voice.text = '1'
     type_el = ET.SubElement(note_el, 'type')
@@ -215,7 +227,7 @@ def apply_measure_beaming(notes_info, time_signature=(4,4)):
     beats = []
     current_beat = []
     current_time = 0
-    beat_duration = 4  # quarter note duration
+    beat_duration = 4  # quarter note = 4 divisions as per our definition
 
     for note_el, info in notes_info:
         if current_time % beat_duration == 0 and current_beat:
@@ -236,7 +248,6 @@ def create_musicxml(tokens, time_signature=(4,4), key=0):
     Create MusicXML from drum notation tokens.
     Handles measure divisions marked by '|' and normalizes measure durations.
     """
-    # Split tokens into measures
     measures = split_into_measures(tokens)
     
     score_partwise = ET.Element('score-partwise', version="3.1")
@@ -247,14 +258,12 @@ def create_musicxml(tokens, time_signature=(4,4), key=0):
 
     part = ET.SubElement(score_partwise, 'part', id="P1")
     
-    # Process each measure
     for measure_num, measure_tokens in enumerate(measures, 1):
-        # Normalize the measure duration
         normalized_tokens = normalize_measure_duration(measure_tokens)
         
         measure = ET.SubElement(part, 'measure', number=str(measure_num))
         
-        # Add attributes only to first measure
+        # Add attributes to the first measure
         if measure_num == 1:
             attributes = ET.SubElement(measure, 'attributes')
             div_el = ET.SubElement(attributes, 'divisions')
@@ -273,23 +282,37 @@ def create_musicxml(tokens, time_signature=(4,4), key=0):
             line = ET.SubElement(clef, 'line')
             line.text = '2'
 
-        # Process notes in the normalized measure
         notes_info = []
         for token in normalized_tokens:
             info = parse_note(token)
             if 'F' in info.get('embellishments', []):
+                # Add a grace note (flam) before main note
                 add_grace_note_before(measure)
             note_el = create_note_element(measure, info)
             notes_info.append((note_el, info))
 
-        # Apply beaming within the measure
+        # Apply beaming
         apply_measure_beaming(notes_info, time_signature)
     
-    return ET.tostring(score_partwise, encoding='unicode', method='xml')
+    # Convert the ElementTree to a pretty-printed XML string with declaration
+    rough_string = ET.tostring(score_partwise, 'utf-8')
+    reparsed = minidom.parseString(rough_string)
+    pretty_xml = reparsed.toprettyxml(indent="  ")
+    return pretty_xml
 
-# Example usage
 if __name__ == "__main__":
-    # Example notation with measure markers
-    tokens = ["SR","SL","RE", "|", "SR","SL","SR","SL", "|", "ER","EL","RQ", "|"]
-    xml_output = create_musicxml(tokens)
-    print(xml_output)
+    try:
+        # Read Viraaj's Music Notation from stdin
+        # Example: "SR SL RE | SR SL SR SL | ER EL RQ"
+        notation_input = sys.stdin.read().strip()
+        if not notation_input:
+            raise ValueError("No input provided for Viraaj's Music Notation.")
+
+        tokens = notation_input.split()
+
+        xml_output = create_musicxml(tokens)
+        print(xml_output)
+    except Exception as e:
+        # Output the error message to stderr
+        sys.stderr.write(f"Error: {str(e)}\n")
+        sys.exit(1)
