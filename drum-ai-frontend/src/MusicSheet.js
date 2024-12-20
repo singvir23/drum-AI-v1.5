@@ -1,5 +1,6 @@
-import React, { useState, useRef } from 'react';
-import { OpenSheetMusicDisplay } from 'opensheetmusicdisplay';
+import React, { useState, useRef } from "react";
+import { OpenSheetMusicDisplay } from "opensheetmusicdisplay";
+import "./MusicSheet.css"; // Import the new CSS
 
 const MusicSheet = () => {
   const [prompt, setPrompt] = useState("");
@@ -31,16 +32,19 @@ const MusicSheet = () => {
   };
 
   return (
-    <div>
-      <input
-        type="text"
-        value={prompt}
-        onChange={(e) => setPrompt(e.target.value)}
-        placeholder="Enter a music prompt..."
-      />
-      <button onClick={handleGenerateMusic} disabled={loading}>
-        {loading ? "Generating..." : "Generate Music"}
-      </button>
+    <div className="music-sheet-container">
+      <h1>Music Sheet Generator</h1>
+      <div className="input-container">
+        <input
+          type="text"
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          placeholder="Enter a music prompt..."
+        />
+        <button onClick={handleGenerateMusic} disabled={loading}>
+          {loading ? "Generating..." : "Generate Music"}
+        </button>
+      </div>
       {loading && <div className="loading-spinner"></div>}
       <div ref={osmdRef} className="osmd-container"></div>
     </div>

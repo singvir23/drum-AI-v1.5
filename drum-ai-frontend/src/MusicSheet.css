@@ -1,0 +1,116 @@
+.music-sheet-container {
+    width: 100%; /* Take up the full width of the screen */
+    max-width: 100%; /* Restrict width to the screen size */
+    margin: 20px auto; /* Center the container */
+    padding: 20px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0px 8px 20px rgba(0, 0, 0, 0.1);
+    text-align: center;
+  }
+  
+  h1 {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 20px;
+  }
+  
+  .input-container {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap; /* Allow inputs and buttons to wrap on smaller screens */
+  }
+  
+  input[type="text"] {
+    flex: 1;
+    padding: 15px;
+    font-size: 1rem;
+    border: 2px solid #cccccc;
+    border-radius: 5px;
+    outline: none;
+    transition: all 0.3s ease;
+    min-width: 250px; /* Minimum width for smaller devices */
+  }
+  
+  input[type="text"]:focus {
+    border-color: #80d0ff;
+    box-shadow: 0 0 10px rgba(128, 208, 255, 0.7);
+  }
+  
+  button {
+    padding: 15px 20px;
+    background: linear-gradient(135deg, #80d0ff, #b19cd9);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  
+  button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+  }
+  
+  button:hover:not(:disabled) {
+    transform: scale(1.05);
+    box-shadow: 0px 6px 10px rgba(0, 0, 0, 0.15);
+  }
+  
+  .loading-spinner {
+    border: 5px solid #f3f3f3;
+    border-radius: 50%;
+    border-top: 5px solid #80d0ff;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin: 20px auto;
+  }
+  
+  @keyframes spin {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+  
+  .osmd-container {
+    display: flex; /* Center content within the container */
+    justify-content: center;
+    align-items: center;
+    margin-top: 20px;
+    width: 100%; /* Take up the full width of the screen */
+    max-width: 100%; /* Constrain the width to the screen size */
+    background: #f9f9f9;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+    overflow-x: auto; /* Prevent horizontal scrolling issues */
+    margin-left: auto;
+    margin-right: auto;
+  }
+  
+  @media (max-width: 768px) {
+    /* Adjustments for smaller screens */
+    .osmd-container {
+      padding: 10px;
+      border-radius: 6px;
+    }
+  
+    input[type="text"] {
+      font-size: 0.9rem;
+    }
+  
+    button {
+      padding: 12px 15px;
+      font-size: 0.9rem;
+    }
+  }
+  

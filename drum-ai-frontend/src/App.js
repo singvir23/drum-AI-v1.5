@@ -1,15 +1,16 @@
+// App.js
 import React from 'react';
-import './App.css';
+import { CssBaseline, Container } from '@mui/material';
 import MusicSheet from './MusicSheet';
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <h1>AI Sheet Music Generator</h1>
+    <React.Fragment>
+      <CssBaseline />
+      <Container maxWidth="md">
         <MusicSheet />
-      </header>
-    </div> //hello I love cats
+      </Container>
+    </React.Fragment>
   );
 }
 
