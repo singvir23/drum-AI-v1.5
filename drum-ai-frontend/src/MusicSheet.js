@@ -9,7 +9,7 @@ const MusicSheet = () => {
   const osmdRef = useRef(null);
 
   // Get the API URL from environment variable or default to production URL
-  const API_URL = process.env.REACT_APP_API_URL || "https://your-vercel-project.vercel.app/api/generate-xml";
+  const API_URL = process.env.REACT_APP_API_URL
 
   const handleGenerateMusic = async () => {
     setLoading(true);
