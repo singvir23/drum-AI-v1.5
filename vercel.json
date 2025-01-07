@@ -1,15 +1,6 @@
 {
-    "builds": [
-      {
-        "src": "drum-ai-frontend/package.json",
-        "use": "@vercel/static-build",
-        "config": {
-          "distDir": "build"
-        }
-      }
-    ],
-    "routes": [
-      { "src": "/(.*)", "dest": "drum-ai-frontend/build/$1" }
-    ]
-  }
-  
+  "version": 2,
+  "builds" : [{"src": "./server.js", "use":
+  "@vercel/node" }],
+  "routes": [{ "src": "/(.*)", "dest": "/"}]
+}
