@@ -7,8 +7,8 @@
     "opensheetmusicdisplay": "^1.8.9"
   },
   "scripts": {
-    "start": "node server.js",
-    "build": "echo 'No build script defined'",
+    "start": "node index.js",
+    "build": "npm install",
     "test": "echo 'Error: no test specified' && exit 1"
   },
   "devDependencies": {

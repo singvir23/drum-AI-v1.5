@@ -8,23 +8,21 @@ const MusicSheet = () => {
   const [error, setError] = useState(null);
   const osmdRef = useRef(null);
 
-  // Get the API URL from environment variable or default to production URL
-  const API_URL = process.env.REACT_APP_API_URL
-
   const handleGenerateMusic = async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const response = await fetch(API_URL, {
+      const response = await fetch("https://drum-ai-backend.vercel.app/generate-xml", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ prompt })
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to generate music');
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
@@ -38,25 +36,14 @@ const MusicSheet = () => {
         const osmd = new OpenSheetMusicDisplay(osmdRef.current, {
           autoResize: true,
           drawTitle: false,
-          drawingParameters: "compact",
-          // Add more OSMD options as needed
-          followCursor: false,
-          disableCursor: true,
         });
 
         await osmd.load(data.xml);
         osmd.render();
-
-        // Optionally display the notation if you want to show it
-        if (data.notation) {
-          console.log("Generated Notation:", data.notation);
-        }
-      } else {
-        throw new Error('No XML data received');
       }
     } catch (error) {
       console.error("Error generating music: ", error);
-      setError(error.message || 'Failed to generate music. Please try again.');
+      setError(error.message);
     } finally {
       setLoading(false);
     }
@@ -72,30 +59,13 @@ const MusicSheet = () => {
           onChange={(e) => setPrompt(e.target.value)}
           placeholder="Enter a music prompt..."
           disabled={loading}
-          className="prompt-input"
         />
-        <button 
-          onClick={handleGenerateMusic} 
-          disabled={loading || !prompt.trim()}
-          className="generate-button"
-        >
+        <button onClick={handleGenerateMusic} disabled={loading}>
           {loading ? "Generating..." : "Generate Music"}
         </button>
       </div>
-
-      {loading && (
-        <div className="loading-container">
-          <div className="loading-spinner"></div>
-          <p>Generating your music sheet...</p>
-        </div>
-      )}
-
-      {error && (
-        <div className="error-message">
-          {error}
-        </div>
-      )}
-
+      {error && <div className="error-message">{error}</div>}
+      {loading && <div className="loading-spinner"></div>}
       <div ref={osmdRef} className="osmd-container"></div>
     </div>
   );
