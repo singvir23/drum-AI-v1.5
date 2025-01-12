@@ -13,7 +13,7 @@ const MusicSheet = () => {
     setError(null);
 
     try {
-      const response = await fetch(REACT_APP_API_URL, {
+      const response = await fetch(process.env.REACT_APP_API_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
