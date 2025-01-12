@@ -13,7 +13,7 @@ const MusicSheet = () => {
     setError(null);
 
     try {
-      const response = await fetch("https://drum-ai-backend.vercel.app/generate-xml", {
+      const response = await fetch(REACT_APP_API_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"

@@ -9,7 +9,7 @@ const openAIKey = process.env.OPENAI_API_KEY;
 const openai = new OpenAI({ apiKey: openAIKey });
 
 // Add your AWS Lambda function URL here
-const LAMBDA_URL = process.env.AWS_LAMBDA_URL;  // e.g. "https://xxxx.lambda-url.region.on.aws"
+const LAMBDA_URL = process.env.AWS_LAMBDA_URL;  
 
 router.post("/", async (req, res) => {
   try {
