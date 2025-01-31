@@ -51,7 +51,7 @@ const MusicSheet = () => {
 
   return (
     <div className="music-sheet-container">
-      <h1>Music Sheet Generator</h1>
+      <h1>AI Drum Lick Generator</h1>
       <div className="input-container">
         <input
           type="text"

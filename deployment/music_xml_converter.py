@@ -406,3 +406,47 @@ def create_musicxml(tokens, time_signature=(4, 4)):
     rough_string = ET.tostring(score_partwise, 'utf-8')
     reparsed = minidom.parseString(rough_string)
     return reparsed.toprettyxml(indent="  ")
+
+def main():
+    """
+    Main method to input Viraaj's music notation and output MusicXML.
+    
+    Usage:
+        Run the script and enter the notation when prompted.
+        The MusicXML will be saved to 'output.musicxml'.
+    
+    Example Input:
+        Q Q3 E E E D | H R | Q Q Q Q
+    """
+    print("Viraaj's Music Notation to MusicXML Converter")
+    print("------------------------------------------------")
+    print("Enter your notation using the following symbols:")
+    print("Notes: W, H, Q, E, S, T (Whole, Half, Quarter, Eighth, Sixteenth, Thirty-second)")
+    print("Triplets: Append '3' to the note (e.g., Q3 for quarter triplet)")
+    print("Rests: Append 'R' to the note (e.g., QR for quarter rest)")
+    print("Sticking: Prefix 'R' or 'L' (e.g., RQ for right hand quarter note)")
+    print("Embellishments: X (accent), G (ghost note), D (diddle), F (flam)")
+    print("Measures are separated by '|'\n")
+    
+    notation = input("Enter Viraaj's music notation: ").strip()
+    
+    # Split tokens by spaces while keeping '|' as separate tokens
+    tokens = []
+    for part in notation.split('|'):
+        part = part.strip()
+        if part:
+            tokens.extend(part.split())
+        tokens.append('|')
+    if tokens and tokens[-1] == '|':
+        tokens.pop()  # Remove the last '|' if present
+    
+    try:
+        musicxml = create_musicxml(tokens)
+        with open("output.musicxml", "w", encoding='utf-8') as f:
+            f.write(musicxml)
+        print("\nMusicXML has been successfully written to 'output.musicxml'.")
+    except Exception as e:
+        print(f"\nAn error occurred: {e}")
+
+if __name__ == "__main__":
+    main()
