@@ -31,7 +31,7 @@ router.post("/", async (req, res) => {
     try {
       console.log("DEBUG: About to call OpenAI...");
       completion = await openai.chat.completions.create({
-        model: "ft:gpt-4o-2024-08-06:personal:drum-ai:AgcRzsC7", // <--- ensure this model name is correct
+        model: "ft:gpt-4o-2024-08-06:personal::AvbNU45V", 
         messages: [
           {
             role: "system",
