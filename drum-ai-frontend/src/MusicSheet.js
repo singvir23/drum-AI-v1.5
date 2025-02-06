@@ -67,6 +67,27 @@ const MusicSheet = () => {
       {error && <div className="error-message">{error}</div>}
       {loading && <div className="loading-spinner"></div>}
       <div ref={osmdRef} className="osmd-container"></div>
+      <div className="info-message">
+        <p className="text-center">
+          This model has been trained on a specific set of rudiments including single strokes, 
+          paradiddles, paradiddlediddles, paraparadiddles, and all variations of triplets. 
+          It supports embellishments like accents, flams, ghosts, and diddles. Results may be 
+          unreliable for patterns outside these rudiments.
+        </p>
+        <p className="text-center">
+          For optimal results, align your prompts with the diction used in the training dataset
+        </p>
+        <div className="link-container">
+          <a 
+            href="https://docs.google.com/spreadsheets/d/1aCQaoQlOaqvEH5VkMR_v5W4VfPgw02EmWrTizo5cUdQ/edit?usp=sharing"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="training-data-link"
+          >
+            View Training Data
+          </a>
+        </div>
+      </div>
     </div>
   );
 };

@@ -4,7 +4,6 @@
   font-family: "PT Mono", monospace;
 }
 
-/* Add styles for the body and html to enable full-height centering */
 html, body {
   height: 100%;
   margin: 0;
@@ -183,6 +182,48 @@ button:hover::after {
   align-items: center;
   justify-content: center;
   border: 1px solid #ffa8a8;
+}
+
+.info-message {
+  margin-top: 32px;
+  padding: 24px;
+  background: #f8f9fa;
+  border-radius: 16px;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: #495057;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.info-message p {
+  margin: 0 0 16px;
+}
+
+.info-message p:last-child {
+  margin-bottom: 0;
+}
+
+.link-container {
+  text-align: center;
+  margin-top: 20px;
+}
+
+.training-data-link {
+  display: inline-block;
+  padding: 12px 24px;
+  background: #000;
+  color: #fff;
+  text-decoration: none;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+
+.training-data-link:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 @media (max-width: 768px) {
