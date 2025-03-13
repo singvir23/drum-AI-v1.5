@@ -29,8 +29,8 @@ DURATION_MAP = {
     'S3': 4    # Sixteenth triplet
 }
 
+# Converts notes to MusicXML note type strings
 def xml_note_type(duration_char):
-    """Convert duration character to MusicXML note type."""
     mapping = {
         'W': 'whole',
         'H': 'half',
@@ -42,10 +42,10 @@ def xml_note_type(duration_char):
         'E3': 'eighth',
         'S3': '16th'
     }
-    return mapping.get(duration_char, 'quarter')
+    return mapping.get(duration_char, 'quarter') # Default to quarter
 
+# Parse a note token into its components
 def parse_note(token):
-    """Parse a note token into its components."""
     note_info = {
         'rest': False,
         'sticking': None,
@@ -65,6 +65,7 @@ def parse_note(token):
         note_info['weight'] = WEIGHT_MAP.get(base_duration, Fraction(1, 4))
         note_info['duration_divisions'] = DURATION_MAP.get(base_duration, 32)
         note_info['type'] = xml_note_type(base_duration)
+        # Below shouldn't be necessary, but I'll leave it in for now
         if base_duration.endswith('3'):
             note_info['is_triplet'] = True
             note_info['triplet_type'] = base_duration
@@ -93,8 +94,8 @@ def parse_note(token):
     
     return note_info
 
+# Normalize a measure to exactly weight 1
 def normalize_measure(measure_tokens):
-    """Normalize a measure to exactly weight 1."""
     total_weight = Fraction(0)
     normalized_tokens = []
     

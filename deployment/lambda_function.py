@@ -24,6 +24,7 @@ def lambda_handler(event, context):
             }
         
         # Convert to MusicXML
+        notation_input = notation_input.replace('|', ' | ')
         tokens = notation_input.split()
         xml_output = create_musicxml(tokens)
         
