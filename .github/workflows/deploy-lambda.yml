@@ -1,0 +1,63 @@
+name: Deploy to AWS Lambda
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'deployment/**'
+      - '.github/workflows/deploy-lambda.yml'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install dependencies
+        working-directory: ./deployment
+        run: |
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt -t .
+          fi
+
+      - name: Create deployment package
+        working-directory: ./deployment
+        run: |
+          # Remove any existing zip
+          rm -f function.zip
+
+          # Create zip with all Python files and dependencies
+          zip -r function.zip . -x "*.git*" -x "*__pycache__*" -x "*.pyc" -x "venv/*" -x "*.zip"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-2
+
+      - name: Deploy to Lambda
+        working-directory: ./deployment
+        run: |
+          aws lambda update-function-code \
+            --function-name DrumCompiler \
+            --zip-file fileb://function.zip
+
+      - name: Wait for Lambda update to complete
+        run: |
+          aws lambda wait function-updated \
+            --function-name DrumCompiler
+
+      - name: Print deployment success
+        run: |
+          echo "✅ Lambda function deployed successfully!"
+          echo "Function: DrumCompiler"
+          echo "Region: us-east-2"
