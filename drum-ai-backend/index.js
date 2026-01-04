@@ -4,7 +4,13 @@ const cors = require("cors");
 const generateXmlRouter = require("./generate-xml");
 
 const app = express();
-app.use(cors());
+
+// CORS - allow all origins for now
+app.use(cors({
+  origin: '*',
+  credentials: false
+}));
+
 app.use(express.json());
 
 // For Node-based routes
