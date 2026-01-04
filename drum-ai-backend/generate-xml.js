@@ -1,12 +1,12 @@
 // generate-xml.js
 const { Router } = require("express");
 const fetch = require("node-fetch");
-const OpenAI = require("openai");
+const Anthropic = require("@anthropic-ai/sdk");
+const { selectFewShotExamples, formatExamplesForPrompt } = require("./fewShotExamples");
 require("dotenv").config();
 
 const router = Router();
-const openAIKey = process.env.OPENAI_API_KEY;
-const openai = new OpenAI({ apiKey: openAIKey });
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 const LAMBDA_URL = process.env.AWS_LAMBDA_URL;  
 
@@ -23,43 +23,124 @@ router.post("/", async (req, res) => {
 
     // Log your environment variables to ensure they're defined
     console.log("DEBUG: LAMBDA_URL:", process.env.AWS_LAMBDA_URL || "Not set");
-    console.log("DEBUG: OPENAI_API_KEY:", process.env.OPENAI_API_KEY ? "Found" : "Not set");
+    console.log("DEBUG: ANTHROPIC_API_KEY:", process.env.ANTHROPIC_API_KEY ? "Found" : "Not set");
 
-    // 2. Call OpenAI
-    let completion;
+    // 2. Select few-shot examples based on prompt
+    const fewShotExamples = selectFewShotExamples(prompt, 3);
+    const examplesText = formatExamplesForPrompt(fewShotExamples);
+    console.log("DEBUG: Selected", fewShotExamples.length, "few-shot examples");
+
+    // 3. Call Claude 4.5 Sonnet with structured output
+    let drumNotationJSON;
     try {
-      console.log("DEBUG: About to call OpenAI...");
-      completion = await openai.chat.completions.create({
-        model: "ft:gpt-4o-2024-08-06:personal::AvbNU45V", 
+      console.log("DEBUG: About to call Claude...");
+
+      const systemPrompt = `You are a professional drum notation generator. You convert natural language descriptions into structured JSON drum notation.
+
+**Viraaj's Drum Notation System:**
+- **Sticking**: R (right hand), L (left hand)
+- **Duration**: W (whole), H (half), Q (quarter), E (eighth), S (sixteenth), T (thirty-second)
+- **Triplets**: Add '3' suffix (Q3, E3, S3)
+- **Embellishments**: X (accent), F (flam/grace note), D (diddle/double stroke), G (ghost note)
+- **Rests**: Use duration + 'R' suffix (e.g., QR for quarter rest)
+
+**JSON Format:**
+{
+  "timeSignature": [4, 4],
+  "measures": [
+    {
+      "notes": [
+        { "sticking": "R", "duration": "S" },
+        { "sticking": "L", "duration": "S", "embellishments": ["X"] }
+      ]
+    }
+  ]
+}
+
+${examplesText}Generate valid JSON matching this format. Ensure each measure adds up to the correct time signature (default 4/4 = 1.0 beats).`;
+
+      const response = await anthropic.beta.messages.create({
+        model: "claude-sonnet-4-5-20250929",
+        max_tokens: 4096,
+        betas: ["structured-outputs-2025-11-13"],
         messages: [
           {
-            role: "system",
-            content: "You are a helpful assistant who generates Viraaj's Music Notation."
-          },
-          { role: "user", content: prompt }
+            role: "user",
+            content: prompt
+          }
         ],
+        system: systemPrompt,
+        output_format: {
+          type: "json_schema",
+          schema: {
+            type: "object",
+            properties: {
+              timeSignature: {
+                type: "array",
+                items: { type: "integer" },
+                minItems: 2,
+                maxItems: 2
+              },
+              measures: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    notes: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        properties: {
+                          sticking: {
+                            type: "string",
+                            enum: ["R", "L"]
+                          },
+                          duration: {
+                            type: "string",
+                            enum: ["W", "H", "Q", "E", "S", "T", "Q3", "E3", "S3", "WR", "HR", "QR", "ER", "SR", "TR"]
+                          },
+                          embellishments: {
+                            type: "array",
+                            items: {
+                              type: "string",
+                              enum: ["X", "F", "D", "G"]
+                            }
+                          }
+                        },
+                        required: ["sticking", "duration"],
+                        additionalProperties: false
+                      }
+                    }
+                  },
+                  required: ["notes"],
+                  additionalProperties: false
+                }
+              }
+            },
+            required: ["timeSignature", "measures"],
+            additionalProperties: false
+          }
+        }
       });
-      console.log("DEBUG: OpenAI response:", JSON.stringify(completion, null, 2));
+
+      drumNotationJSON = JSON.parse(response.content[0].text);
+      console.log("DEBUG: Claude response JSON:", JSON.stringify(drumNotationJSON, null, 2));
     } catch (err) {
-      console.error("DEBUG: OpenAI API call failed:", err);
+      console.error("DEBUG: Claude API call failed:", err);
       return res.status(500).json({
-        error: "OpenAI API error",
+        error: "Claude API error",
         details: err.message || err
       });
     }
 
-    // Extract the notation text returned by OpenAI
-    if (!completion || !completion.choices || !completion.choices[0]) {
-      console.error("DEBUG: No choices in OpenAI completion.");
+    if (!drumNotationJSON || !drumNotationJSON.measures) {
+      console.error("DEBUG: Invalid JSON structure from Claude");
       return res.status(500).json({
-        error: "No completion was returned from OpenAI."
+        error: "Invalid JSON structure returned from Claude"
       });
     }
 
-    const viraajsNotation = completion.choices[0].message.content.trim();
-    console.log("DEBUG: viraajsNotation:", viraajsNotation);
-
-    // 3. Call AWS Lambda
+    // 4. Call AWS Lambda with JSON notation
     let compiledXml = null;
     try {
       console.log("DEBUG: About to call AWS Lambda...");
@@ -67,8 +148,8 @@ router.post("/", async (req, res) => {
       const compileRes = await fetch(LAMBDA_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          notation: viraajsNotation  // Changed: removed the extra 'body' nesting
+        body: JSON.stringify({
+          jsonNotation: drumNotationJSON
         }),
       });
 
@@ -82,7 +163,7 @@ router.post("/", async (req, res) => {
         return res.status(500).json({
           error: "Compiler failed",
           details: rawLambdaText,
-          notation: viraajsNotation
+          notation: drumNotationJSON
         });
       }
 
@@ -102,15 +183,15 @@ router.post("/", async (req, res) => {
       return res.status(500).json({
         error: "Failed to call AWS Lambda compiler",
         details: err.message,
-        notation: viraajsNotation
+        notation: drumNotationJSON
       });
     }
 
-    // 4. Return JSON: { xml, notation }
+    // 5. Return JSON: { xml, notation }
     console.log("DEBUG: Final success, returning 200");
     return res.status(200).json({
-      xml: compiledXml,         // from Lambda
-      notation: viraajsNotation, // from OpenAI
+      xml: compiledXml,              // from Lambda
+      notation: drumNotationJSON,    // from Claude
     });
 
   } catch (error) {

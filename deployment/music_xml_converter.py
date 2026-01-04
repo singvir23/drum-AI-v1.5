@@ -408,14 +408,64 @@ def create_musicxml(tokens, time_signature=(4, 4)):
     reparsed = minidom.parseString(rough_string)
     return reparsed.toprettyxml(indent="  ")
 
+def create_musicxml_from_json(notation_json):
+    """
+    Creates MusicXML from JSON notation structure.
+
+    Args:
+        notation_json (dict): JSON structure with timeSignature and measures
+        Example:
+        {
+            "timeSignature": [4, 4],
+            "measures": [
+                {
+                    "notes": [
+                        {"sticking": "R", "duration": "S"},
+                        {"sticking": "L", "duration": "S", "embellishments": ["X"]}
+                    ]
+                }
+            ]
+        }
+
+    Returns:
+        str: MusicXML string
+    """
+    time_signature = notation_json.get('timeSignature', [4, 4])
+    measures_data = notation_json.get('measures', [])
+
+    # Convert JSON to token format
+    tokens = []
+    for measure_idx, measure in enumerate(measures_data):
+        notes = measure.get('notes', [])
+        for note in notes:
+            sticking = note.get('sticking', '')
+            duration = note.get('duration', 'Q')
+            embellishments = note.get('embellishments', [])
+
+            # Handle rests
+            if duration.endswith('R'):
+                token = duration
+            else:
+                # Build token: sticking + duration + embellishments
+                token = sticking + duration + ''.join(embellishments)
+
+            tokens.append(token)
+
+        # Add measure separator (except after last measure)
+        if measure_idx < len(measures_data) - 1:
+            tokens.append('|')
+
+    # Use existing create_musicxml function
+    return create_musicxml(tokens, time_signature=tuple(time_signature))
+
 def main():
     """
     Main method to input Viraaj's music notation and output MusicXML.
-    
+
     Usage:
         Run the script and enter the notation when prompted.
         The MusicXML will be saved to 'output.musicxml'.
-    
+
     Example Input:
         Q Q3 E E E D | H R | Q Q Q Q
     """

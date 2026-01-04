@@ -1,6 +1,6 @@
 # lambda_function.py
 import json
-from music_xml_converter import create_musicxml
+from music_xml_converter import create_musicxml, create_musicxml_from_json
 
 def lambda_handler(event, context):
     try:
@@ -10,24 +10,37 @@ def lambda_handler(event, context):
                 body = json.loads(event['body'])
             else:
                 body = event['body']
-            notation_input = body.get('notation', '').strip()
         else:
-            notation_input = event.get('notation', '').strip()
-        
-        if not notation_input:
+            body = event
+
+        # Check if JSON notation or string notation
+        if 'jsonNotation' in body:
+            # New JSON-based format from Claude
+            notation_json = body['jsonNotation']
+            xml_output = create_musicxml_from_json(notation_json)
+        elif 'notation' in body:
+            # Legacy string-based format (backward compatibility)
+            notation_input = body['notation'].strip()
+            if not notation_input:
+                return {
+                    'statusCode': 400,
+                    'headers': {'Content-Type': 'application/json'},
+                    'body': json.dumps({
+                        'error': 'No input provided for Music Notation'
+                    })
+                }
+            notation_input = notation_input.replace('|', ' | ')
+            tokens = notation_input.split()
+            xml_output = create_musicxml(tokens)
+        else:
             return {
                 'statusCode': 400,
                 'headers': {'Content-Type': 'application/json'},
                 'body': json.dumps({
-                    'error': 'No input provided for Music Notation'
+                    'error': 'Missing notation or jsonNotation in request body'
                 })
             }
-        
-        # Convert to MusicXML
-        notation_input = notation_input.replace('|', ' | ')
-        tokens = notation_input.split()
-        xml_output = create_musicxml(tokens)
-        
+
         return {
             'statusCode': 200,
             'headers': {'Content-Type': 'application/json'},
@@ -35,7 +48,7 @@ def lambda_handler(event, context):
                 'xml': xml_output
             })
         }
-        
+
     except Exception as e:
         return {
             'statusCode': 500,
