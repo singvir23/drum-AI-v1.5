@@ -77,9 +77,7 @@ ${examplesText}Generate valid JSON matching this format. Ensure each measure add
             properties: {
               timeSignature: {
                 type: "array",
-                items: { type: "integer" },
-                minItems: 2,
-                maxItems: 2
+                items: { type: "integer" }
               },
               measures: {
                 type: "array",
