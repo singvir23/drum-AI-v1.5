@@ -40,7 +40,10 @@ router.post("/", async (req, res) => {
 **Viraaj's Drum Notation System:**
 - **Sticking**: R (right hand), L (left hand)
 - **Duration**: W (whole), H (half), Q (quarter), E (eighth), S (sixteenth), T (thirty-second)
-- **Triplets**: Add '3' suffix (Q3, E3, S3)
+- **Tuplets**:
+  - Triplets: Add '3' suffix (Q3, E3, S3) - 3 notes in space of 2
+  - Fivelets/Quintuplets: Add '5' suffix (Q5, E5, S5) - 5 notes in space of 2
+  - Sevenlets/Septuplets: Add '7' suffix (Q7, E7, S7) - 7 notes in space of 2
 - **Embellishments**: X (accent), F (flam/grace note), D (diddle/double stroke), G (ghost note)
 - **Rests**: Use duration + 'R' suffix (e.g., QR for quarter rest)
 

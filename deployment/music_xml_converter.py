@@ -218,15 +218,18 @@ def add_tuplet_notation(note_el, position=None, note_info=None):
         actual_notes.text = '3'
         normal_notes.text = '2'
 
-    if position:
-        notations = note_el.find('notations')
-        if notations is None:
-            notations = ET.SubElement(note_el, 'notations')
+    # Add tuplet notation to ALL notes (start, middle, stop)
+    notations = note_el.find('notations')
+    if notations is None:
+        notations = ET.SubElement(note_el, 'notations')
 
-        if position == 'start':
-            ET.SubElement(notations, 'tuplet', type="start", bracket="no")
-        elif position == 'stop':
-            ET.SubElement(notations, 'tuplet', type="stop")
+    if position == 'start':
+        ET.SubElement(notations, 'tuplet', type="start", bracket="yes", **{'show-number': 'actual'})
+    elif position == 'stop':
+        ET.SubElement(notations, 'tuplet', type="stop")
+    else:
+        # Middle notes also need tuplet notation to show the number
+        ET.SubElement(notations, 'tuplet', type="continue")
 
 def create_unpitched_elements(note_el):
     """Create unpitched note elements."""
