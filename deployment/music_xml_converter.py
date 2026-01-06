@@ -224,7 +224,7 @@ def add_tuplet_notation(note_el, position=None, note_info=None):
         notations = ET.SubElement(note_el, 'notations')
 
     if position == 'start':
-        ET.SubElement(notations, 'tuplet', type="start", bracket="yes", **{'show-number': 'actual'})
+        ET.SubElement(notations, 'tuplet', type="start", bracket="no", **{'show-number': 'actual'})
     elif position == 'stop':
         ET.SubElement(notations, 'tuplet', type="stop")
     else:

@@ -40,10 +40,16 @@ router.post("/", async (req, res) => {
 **Viraaj's Drum Notation System:**
 - **Sticking**: R (right hand), L (left hand)
 - **Duration**: W (whole), H (half), Q (quarter), E (eighth), S (sixteenth), T (thirty-second)
-- **Tuplets**:
+- **Tuplets** (IMPORTANT - use the correct suffix based on the user's request):
   - Triplets: Add '3' suffix (Q3, E3, S3) - 3 notes in space of 2
+    Example: "eighth note triplets" → use E3 duration
+    In 4/4 time: 12 notes (4 groups of 3) fills one measure
   - Fivelets/Quintuplets: Add '5' suffix (Q5, E5, S5) - 5 notes in space of 2
+    Example: "eighth note fivelets" → use E5 duration (NOT E3!)
+    In 4/4 time: 20 notes (4 groups of 5) fills one measure
   - Sevenlets/Septuplets: Add '7' suffix (Q7, E7, S7) - 7 notes in space of 2
+    Example: "eighth note sevenlets" → use E7 duration (NOT E3!)
+    In 4/4 time: 28 notes (4 groups of 7) fills one measure
 - **Embellishments**: X (accent), F (flam/grace note), D (diddle/double stroke), G (ghost note)
 - **Rests**: Use duration + 'R' suffix (e.g., QR for quarter rest)
 
@@ -60,7 +66,9 @@ router.post("/", async (req, res) => {
   ]
 }
 
-${examplesText}Generate valid JSON matching this format. Ensure each measure adds up to the correct time signature (default 4/4 = 1.0 beats).`;
+${examplesText}Generate valid JSON matching this format. Ensure each measure adds up to the correct time signature (default 4/4 = 1.0 beats).
+
+CRITICAL: When the user asks for "fivelets" or "quintuplets", use duration E5/Q5/S5 (NOT E3). When they ask for "sevenlets" or "septuplets", use duration E7/Q7/S7 (NOT E3).`;
 
       const response = await anthropic.beta.messages.create({
         model: "claude-sonnet-4-5-20250929",
@@ -98,7 +106,7 @@ ${examplesText}Generate valid JSON matching this format. Ensure each measure add
                           },
                           duration: {
                             type: "string",
-                            enum: ["W", "H", "Q", "E", "S", "T", "Q3", "E3", "S3", "WR", "HR", "QR", "ER", "SR", "TR"]
+                            enum: ["W", "H", "Q", "E", "S", "T", "Q3", "E3", "S3", "Q5", "E5", "S5", "Q7", "E7", "S7", "WR", "HR", "QR", "ER", "SR", "TR"]
                           },
                           embellishments: {
                             type: "array",
