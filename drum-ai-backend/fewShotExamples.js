@@ -257,6 +257,84 @@ const CURATED_EXAMPLES = [
     }
   },
 
+  // Fivelets
+  {
+    category: 'fivelets',
+    prompt: 'Create a measure of eighth note fivelets',
+    json: {
+      timeSignature: [4, 4],
+      measures: [
+        {
+          notes: [
+            { sticking: 'R', duration: 'E5' },
+            { sticking: 'L', duration: 'E5' },
+            { sticking: 'R', duration: 'E5' },
+            { sticking: 'L', duration: 'E5' },
+            { sticking: 'R', duration: 'E5' },
+            { sticking: 'L', duration: 'E5' },
+            { sticking: 'R', duration: 'E5' },
+            { sticking: 'L', duration: 'E5' },
+            { sticking: 'R', duration: 'E5' },
+            { sticking: 'L', duration: 'E5' },
+            { sticking: 'R', duration: 'E5' },
+            { sticking: 'L', duration: 'E5' },
+            { sticking: 'R', duration: 'E5' },
+            { sticking: 'L', duration: 'E5' },
+            { sticking: 'R', duration: 'E5' },
+            { sticking: 'L', duration: 'E5' },
+            { sticking: 'R', duration: 'E5' },
+            { sticking: 'L', duration: 'E5' },
+            { sticking: 'R', duration: 'E5' },
+            { sticking: 'L', duration: 'E5' }
+          ]
+        }
+      ]
+    }
+  },
+
+  // Sevenlets
+  {
+    category: 'sevenlets',
+    prompt: 'Generate a measure of eighth note sevenlets',
+    json: {
+      timeSignature: [4, 4],
+      measures: [
+        {
+          notes: [
+            { sticking: 'R', duration: 'E7' },
+            { sticking: 'L', duration: 'E7' },
+            { sticking: 'R', duration: 'E7' },
+            { sticking: 'L', duration: 'E7' },
+            { sticking: 'R', duration: 'E7' },
+            { sticking: 'L', duration: 'E7' },
+            { sticking: 'R', duration: 'E7' },
+            { sticking: 'L', duration: 'E7' },
+            { sticking: 'R', duration: 'E7' },
+            { sticking: 'L', duration: 'E7' },
+            { sticking: 'R', duration: 'E7' },
+            { sticking: 'L', duration: 'E7' },
+            { sticking: 'R', duration: 'E7' },
+            { sticking: 'L', duration: 'E7' },
+            { sticking: 'R', duration: 'E7' },
+            { sticking: 'L', duration: 'E7' },
+            { sticking: 'R', duration: 'E7' },
+            { sticking: 'L', duration: 'E7' },
+            { sticking: 'R', duration: 'E7' },
+            { sticking: 'L', duration: 'E7' },
+            { sticking: 'R', duration: 'E7' },
+            { sticking: 'L', duration: 'E7' },
+            { sticking: 'R', duration: 'E7' },
+            { sticking: 'L', duration: 'E7' },
+            { sticking: 'R', duration: 'E7' },
+            { sticking: 'L', duration: 'E7' },
+            { sticking: 'R', duration: 'E7' },
+            { sticking: 'L', duration: 'E7' }
+          ]
+        }
+      ]
+    }
+  },
+
   // Diddles
   {
     category: 'diddles',
@@ -309,6 +387,8 @@ const CATEGORY_KEYWORDS = {
   singleStrokes: ['single stroke', 'singles', 'alternating', 'rlrl', 'lrlr'],
   paradiddles: ['paradiddle', 'rlrr', 'lrll', 'para'],
   triplets: ['triplet', 'trip', 'three'],
+  fivelets: ['fivelet', 'five', 'quintuplet', '5-let', '5let'],
+  sevenlets: ['sevenlet', 'seven', 'septuplet', '7-let', '7let'],
   flams: ['flam', 'grace note', 'grace'],
   diddles: ['diddle', 'double', 'buzz', 'roll'],
   accents: ['accent', 'emphasis', 'loud', 'strong'],
@@ -340,17 +420,17 @@ function selectFewShotExamples(userPrompt, numExamples = 3) {
 
     // Check for duration keywords
     if (promptLower.includes('16th') || promptLower.includes('sixteenth')) {
-      if (example.json.measures[0].notes.some(n => n.duration === 'S' || n.duration === 'S3')) {
+      if (example.json.measures[0].notes.some(n => n.duration === 'S' || n.duration === 'S3' || n.duration === 'S5' || n.duration === 'S7')) {
         score += 5;
       }
     }
     if (promptLower.includes('8th') || promptLower.includes('eighth')) {
-      if (example.json.measures[0].notes.some(n => n.duration === 'E' || n.duration === 'E3')) {
+      if (example.json.measures[0].notes.some(n => n.duration === 'E' || n.duration === 'E3' || n.duration === 'E5' || n.duration === 'E7')) {
         score += 5;
       }
     }
     if (promptLower.includes('quarter')) {
-      if (example.json.measures[0].notes.some(n => n.duration === 'Q' || n.duration === 'Q3')) {
+      if (example.json.measures[0].notes.some(n => n.duration === 'Q' || n.duration === 'Q3' || n.duration === 'Q5' || n.duration === 'Q7')) {
         score += 5;
       }
     }

@@ -11,9 +11,15 @@ WEIGHT_MAP = {
     'E': Fraction(1, 8),    # Eighth note
     'S': Fraction(1, 16),   # Sixteenth note
     'T': Fraction(1, 32),   # Thirty-second note
-    'Q3': Fraction(1, 6),   # Quarter note triplet
-    'E3': Fraction(1, 12),  # Eighth note triplet
-    'S3': Fraction(1, 24),  # Sixteenth note triplet
+    'Q3': Fraction(1, 6),   # Quarter note triplet (3 in space of 2)
+    'E3': Fraction(1, 12),  # Eighth note triplet (3 in space of 2)
+    'S3': Fraction(1, 24),  # Sixteenth note triplet (3 in space of 2)
+    'Q5': Fraction(2, 20),  # Quarter note fivelet (5 in space of 2)
+    'E5': Fraction(2, 40),  # Eighth note fivelet (5 in space of 2)
+    'S5': Fraction(2, 80),  # Sixteenth note fivelet (5 in space of 2)
+    'Q7': Fraction(2, 28),  # Quarter note sevenlet (7 in space of 2)
+    'E7': Fraction(2, 56),  # Eighth note sevenlet (7 in space of 2)
+    'S7': Fraction(2, 112), # Sixteenth note sevenlet (7 in space of 2)
 }
 
 # MusicXML duration values (based on divisions=32)
@@ -24,9 +30,15 @@ DURATION_MAP = {
     'E': 16,   # Eighth note
     'S': 8,    # Sixteenth note
     'T': 4,    # Thirty-second note
-    'Q3': 16,  # Quarter triplet
-    'E3': 8,   # Eighth triplet
-    'S3': 4    # Sixteenth triplet
+    'Q3': 16,  # Quarter triplet (3:2)
+    'E3': 8,   # Eighth triplet (3:2)
+    'S3': 4,   # Sixteenth triplet (3:2)
+    'Q5': 13,  # Quarter fivelet (5:2) - rounded from 12.8
+    'E5': 6,   # Eighth fivelet (5:2) - rounded from 6.4
+    'S5': 3,   # Sixteenth fivelet (5:2) - rounded from 3.2
+    'Q7': 9,   # Quarter sevenlet (7:2) - rounded from 9.14
+    'E7': 5,   # Eighth sevenlet (7:2) - rounded from 4.57
+    'S7': 2,   # Sixteenth sevenlet (7:2) - rounded from 2.29
 }
 
 # Converts notes to MusicXML note type strings
@@ -40,7 +52,13 @@ def xml_note_type(duration_char):
         'T': '32nd',
         'Q3': 'quarter',
         'E3': 'eighth',
-        'S3': '16th'
+        'S3': '16th',
+        'Q5': 'quarter',
+        'E5': 'eighth',
+        'S5': '16th',
+        'Q7': 'quarter',
+        'E7': 'eighth',
+        'S7': '16th'
     }
     return mapping.get(duration_char, 'quarter') # Default to quarter
 
@@ -52,8 +70,9 @@ def parse_note(token):
         'base_duration': None,
         'embellishments': [],
         'weight': Fraction(0),
-        'is_triplet': False,
-        'triplet_type': None,
+        'is_tuplet': False,
+        'tuplet_number': None,  # 3 for triplet, 5 for fivelet, 7 for sevenlet
+        'tuplet_type': None,
         'duration_divisions': 32  # Default duration
     }
     
@@ -65,17 +84,26 @@ def parse_note(token):
         note_info['weight'] = WEIGHT_MAP.get(base_duration, Fraction(1, 4))
         note_info['duration_divisions'] = DURATION_MAP.get(base_duration, 32)
         note_info['type'] = xml_note_type(base_duration)
-        # Below shouldn't be necessary, but I'll leave it in for now
+        # Check for tuplets
         if base_duration.endswith('3'):
-            note_info['is_triplet'] = True
-            note_info['triplet_type'] = base_duration
+            note_info['is_tuplet'] = True
+            note_info['tuplet_number'] = 3
+            note_info['tuplet_type'] = base_duration
+        elif base_duration.endswith('5'):
+            note_info['is_tuplet'] = True
+            note_info['tuplet_number'] = 5
+            note_info['tuplet_type'] = base_duration
+        elif base_duration.endswith('7'):
+            note_info['is_tuplet'] = True
+            note_info['tuplet_number'] = 7
+            note_info['tuplet_type'] = base_duration
         return note_info
-    
+
     # Handle sticking
     if token.startswith(('R', 'L')):
         note_info['sticking'] = token[0]
         token = token[1:]
-    
+
     # Find base duration
     for duration in sorted(WEIGHT_MAP.keys(), key=len, reverse=True):
         if token.startswith(duration):
@@ -83,9 +111,19 @@ def parse_note(token):
             note_info['weight'] = WEIGHT_MAP[duration]
             note_info['duration_divisions'] = DURATION_MAP[duration]
             note_info['type'] = xml_note_type(duration)
+            # Check for tuplets
             if duration.endswith('3'):
-                note_info['is_triplet'] = True
-                note_info['triplet_type'] = duration
+                note_info['is_tuplet'] = True
+                note_info['tuplet_number'] = 3
+                note_info['tuplet_type'] = duration
+            elif duration.endswith('5'):
+                note_info['is_tuplet'] = True
+                note_info['tuplet_number'] = 5
+                note_info['tuplet_type'] = duration
+            elif duration.endswith('7'):
+                note_info['is_tuplet'] = True
+                note_info['tuplet_number'] = 7
+                note_info['tuplet_type'] = duration
             token = token[len(duration):]
             break
     
@@ -156,25 +194,35 @@ def add_diddle(note_el):
     tremolo = ET.SubElement(ornaments, 'tremolo', type="single")
     tremolo.text = '1'
 
-def add_triplet_notation(note_el, position=None, note_info=None):
-    """Add triplet time modification and optional tuplet notation."""
+def add_tuplet_notation(note_el, position=None, note_info=None):
+    """Add tuplet time modification and optional tuplet notation (triplets, fivelets, sevenlets)."""
     time_mod = ET.SubElement(note_el, 'time-modification')
     actual_notes = ET.SubElement(time_mod, 'actual-notes')
     normal_notes = ET.SubElement(time_mod, 'normal-notes')
-    
-    # Handle sixteenth note triplets differently
-    if note_info and note_info['base_duration'] == 'S3':
-        actual_notes.text = '6'
-        normal_notes.text = '4'
+
+    # Determine tuplet ratio based on note type
+    if note_info and note_info.get('tuplet_number'):
+        tuplet_num = note_info['tuplet_number']
+        base_duration = note_info['base_duration']
+
+        # Special case for sixteenth note triplets: 6:4 ratio
+        if tuplet_num == 3 and base_duration == 'S3':
+            actual_notes.text = '6'
+            normal_notes.text = '4'
+        # All other tuplets use X:2 ratio (3:2, 5:2, 7:2)
+        else:
+            actual_notes.text = str(tuplet_num)
+            normal_notes.text = '2'
     else:
+        # Default to triplet 3:2
         actual_notes.text = '3'
         normal_notes.text = '2'
-    
+
     if position:
         notations = note_el.find('notations')
         if notations is None:
             notations = ET.SubElement(note_el, 'notations')
-        
+
         if position == 'start':
             ET.SubElement(notations, 'tuplet', type="start", bracket="no")
         elif position == 'stop':
@@ -200,69 +248,70 @@ def apply_beaming(notes_info):
     """Apply beaming to groups of notes."""
     if not notes_info:
         return
-        
-    # First, identify triplet groups
-    triplet_groups = []
-    current_triplet_group = []
-    current_triplet_type = None
-    
+
+    # First, identify tuplet groups (triplets, fivelets, sevenlets, etc.)
+    tuplet_groups = []
+    current_tuplet_group = []
+    current_tuplet_type = None
+
     for i, (note_el, info) in enumerate(notes_info):
         if info.get('rest'):
-            if current_triplet_group:
-                triplet_groups.append((current_triplet_type, current_triplet_group))
-                current_triplet_group = []
+            if current_tuplet_group:
+                tuplet_groups.append((current_tuplet_type, current_tuplet_group))
+                current_tuplet_group = []
             continue
-            
-        if info['is_triplet']:
-            if not current_triplet_group or info['triplet_type'] == current_triplet_type:
-                current_triplet_type = info['triplet_type']
-                current_triplet_group.append((note_el, info))
-                
-                # Check if we've completed a triplet group
-                if current_triplet_type == 'Q3' and len(current_triplet_group) == 3:
-                    triplet_groups.append((current_triplet_type, current_triplet_group))
-                    current_triplet_group = []
-                elif current_triplet_type == 'E3' and len(current_triplet_group) == 3:
-                    triplet_groups.append((current_triplet_type, current_triplet_group))
-                    current_triplet_group = []
-                elif current_triplet_type == 'S3' and len(current_triplet_group) == 6:
-                    triplet_groups.append((current_triplet_type, current_triplet_group))
-                    current_triplet_group = []
+
+        if info['is_tuplet']:
+            if not current_tuplet_group or info['tuplet_type'] == current_tuplet_type:
+                current_tuplet_type = info['tuplet_type']
+                current_tuplet_group.append((note_el, info))
+
+                # Check if we've completed a tuplet group
+                tuplet_num = info.get('tuplet_number', 3)
+
+                # For sixteenth note triplets, group by 6 (6:4 ratio)
+                if current_tuplet_type == 'S3' and len(current_tuplet_group) == 6:
+                    tuplet_groups.append((current_tuplet_type, current_tuplet_group))
+                    current_tuplet_group = []
+                # For all other tuplets, group by their tuplet number
+                elif current_tuplet_type != 'S3' and len(current_tuplet_group) == tuplet_num:
+                    tuplet_groups.append((current_tuplet_type, current_tuplet_group))
+                    current_tuplet_group = []
             else:
-                if current_triplet_group:
-                    triplet_groups.append((current_triplet_type, current_triplet_group))
-                current_triplet_type = info['triplet_type']
-                current_triplet_group = [(note_el, info)]
+                if current_tuplet_group:
+                    tuplet_groups.append((current_tuplet_type, current_tuplet_group))
+                current_tuplet_type = info['tuplet_type']
+                current_tuplet_group = [(note_el, info)]
         else:
-            if current_triplet_group:
-                triplet_groups.append((current_triplet_type, current_triplet_group))
-                current_triplet_group = []
-    
-    if current_triplet_group:
-        triplet_groups.append((current_triplet_type, current_triplet_group))
-    
-    # Process each triplet group
-    for triplet_type, group in triplet_groups:
-        # Apply beaming for all triplet groups
+            if current_tuplet_group:
+                tuplet_groups.append((current_tuplet_type, current_tuplet_group))
+                current_tuplet_group = []
+
+    if current_tuplet_group:
+        tuplet_groups.append((current_tuplet_type, current_tuplet_group))
+
+    # Process each tuplet group
+    for tuplet_type, group in tuplet_groups:
+        # Apply beaming for all tuplet groups (triplets, fivelets, sevenlets)
         if len(group) > 1:
             apply_beam_group(group)
             
-        # Add triplet notations
+        # Add tuplet notations (triplets, fivelets, sevenlets)
         for i, (note_el, info) in enumerate(group):
             # Add time modification and tuplet markers
             if i == 0:
-                add_triplet_notation(note_el, 'start')
+                add_tuplet_notation(note_el, 'start', info)
             elif i == len(group) - 1:
-                add_triplet_notation(note_el, 'stop')
+                add_tuplet_notation(note_el, 'stop', info)
             else:
-                add_triplet_notation(note_el)
+                add_tuplet_notation(note_el, None, info)
     
-    # Process regular beaming for non-triplet notes
+    # Process regular beaming for non-tuplet notes
     current_weight = Fraction(0)
     current_group = []
-    
+
     for i, (note_el, info) in enumerate(notes_info):
-        if info.get('rest') or info['weight'] >= Fraction(1, 4) or info['is_triplet']:
+        if info.get('rest') or info['weight'] >= Fraction(1, 4) or info['is_tuplet']:
             if current_group:
                 apply_beam_group(current_group)
                 current_group = []
