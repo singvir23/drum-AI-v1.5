@@ -6,20 +6,31 @@ const { selectFewShotExamples, formatExamplesForPrompt } = require("./fewShotExa
 require("dotenv").config();
 
 const router = Router();
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-const LAMBDA_URL = process.env.AWS_LAMBDA_URL;  
+const LAMBDA_URL = process.env.AWS_LAMBDA_URL;
 
 router.post("/", async (req, res) => {
   try {
-    // 1. Check for prompt in request body
-    const { prompt } = req.body;
+    // 1. Check for prompt and API key in request body
+    const { prompt, apiKey } = req.body;
     console.log("DEBUG: Incoming prompt:", prompt);
 
     if (!prompt) {
       console.log("DEBUG: Missing prompt.");
       return res.status(400).json({ error: "Prompt is required" });
     }
+
+    // Use API key from request body if provided, otherwise fall back to environment variable
+    const effectiveApiKey = apiKey || process.env.ANTHROPIC_API_KEY;
+
+    if (!effectiveApiKey) {
+      console.log("DEBUG: No API key provided");
+      return res.status(401).json({ error: "API key is required. Please provide it in the request or set ANTHROPIC_API_KEY environment variable." });
+    }
+
+    // Create Anthropic client with the effective API key
+    const anthropic = new Anthropic({ apiKey: effectiveApiKey });
+    console.log("DEBUG: Using API key from:", apiKey ? "request body" : "environment variable");
 
     // Log your environment variables to ensure they're defined
     console.log("DEBUG: LAMBDA_URL:", process.env.AWS_LAMBDA_URL || "Not set");
