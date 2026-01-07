@@ -15,7 +15,7 @@ MuseScore {
     // ========== SETTINGS ==========
     property string backendUrl: "https://drum-ai-backend.vercel.app"
     property string apiKey: ""
-    property bool settingsConfigured: false
+    property bool settingsConfigured: apiKey.trim() !== ""
 
     // ========== STATE ==========
     property bool isLoading: false
@@ -66,11 +66,11 @@ MuseScore {
         modality: Qt.ApplicationModal
         flags: Qt.Dialog
 
-        color: "#f5f5f5"
+        color: "#2d2d2d"
 
         Rectangle {
             anchors.fill: parent
-            color: "#f5f5f5"
+            color: "#2d2d2d"
 
             ColumnLayout {
                 anchors.fill: parent
@@ -79,20 +79,36 @@ MuseScore {
 
             // Header
             Label {
-                text: "What would you like to generate?"
+                text: "Drum AI Copilot"
                 font.bold: true
-                font.pixelSize: 14
+                font.pixelSize: 16
+                color: "#ffffff"
+            }
+            
+            Label {
+                text: "Enter a prompt to generate drum notation"
+                font.pixelSize: 12
+                color: "#888888"
             }
 
             // Input field
             TextField {
                 id: promptInput
                 Layout.fillWidth: true
-                Layout.preferredHeight: 40
+                Layout.preferredHeight: 44
                 placeholderText: "E.g., Generate paradiddles from measures 4-8"
                 font.pixelSize: 13
+                color: "#ffffff"
+                placeholderTextColor: "#666666"
                 focus: true
                 enabled: !isLoading
+                
+                background: Rectangle {
+                    color: "#3a3a3a"
+                    border.color: promptInput.activeFocus ? "#5a5a5a" : "#4a4a4a"
+                    border.width: 1
+                    radius: 4
+                }
 
                 onAccepted: {
                     if (text.trim() !== "") {
@@ -102,33 +118,43 @@ MuseScore {
             }
 
             // Examples section
-            GroupBox {
+            Rectangle {
                 Layout.fillWidth: true
-                title: "Example Commands"
-
+                implicitHeight: examplesColumn.height + 20
+                color: "#3a3a3a"
+                radius: 4
+                border.color: "#4a4a4a"
+                border.width: 1
+                
                 ColumnLayout {
-                    anchors.fill: parent
-                    spacing: 5
+                    id: examplesColumn
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.top: parent.top
+                    anchors.margins: 10
+                    spacing: 4
+                    
+                    Label {
+                        text: "Example Commands"
+                        font.bold: true
+                        font.pixelSize: 11
+                        color: "#999999"
+                    }
 
                     Label {
                         text: "• Generate one measure of 16th note single strokes"
                         font.pixelSize: 11
-                        color: "#555555"
+                        color: "#777777"
                     }
                     Label {
                         text: "• Create paradiddles from measures 4-8"
                         font.pixelSize: 11
-                        color: "#555555"
+                        color: "#777777"
                     }
                     Label {
                         text: "• Generate triplet single strokes for 2 measures"
                         font.pixelSize: 11
-                        color: "#555555"
-                    }
-                    Label {
-                        text: "• Create eighth note fivelets"
-                        font.pixelSize: 11
-                        color: "#555555"
+                        color: "#777777"
                     }
                 }
             }
@@ -141,19 +167,29 @@ MuseScore {
                 Label {
                     text: "API Key:"
                     font.pixelSize: 12
+                    color: "#a0a0a0"
                 }
 
                 TextField {
                     id: apiKeyInput
                     Layout.fillWidth: true
-                    placeholderText: "Enter your Anthropic API key"
+                    placeholderText: "Enter your Anthropic API key (saved automatically)"
                     echoMode: TextInput.Password
                     font.pixelSize: 11
+                    color: "#ffffff"
+                    placeholderTextColor: "#666666"
                     text: apiKey
+                    
+                    background: Rectangle {
+                        color: "#16213e"
+                        border.color: apiKeyInput.activeFocus ? "#4a9eff" : "#3a3a5a"
+                        border.width: 1
+                        radius: 4
+                    }
 
                     onTextChanged: {
                         apiKey = text
-                        settingsConfigured = text.trim() !== ""
+                        savedSettings.apiKey = text
                     }
                 }
 
@@ -386,7 +422,8 @@ MuseScore {
         }
 
         // Measure range extraction - handle multiple formats:
-        // "measure 2", "measures 2-4", "in measure 2", "from measure 2 to 4", etc.
+        // "measure 2", "measures 2-4", "in measure 2", "from measure 2 to 4"
+        // "first four measures", "last two measures", etc.
         var measureMatch = text.match(/(?:in\s+)?(?:from\s+)?(?:measures?|bars?)\s+(\d+)(?:\s*(?:-|to)\s*(\d+))?/i)
         if (measureMatch) {
             result.measureRange = {
@@ -394,6 +431,22 @@ MuseScore {
                 end: measureMatch[2] ? parseInt(measureMatch[2]) : parseInt(measureMatch[1])
             }
             log("Extracted measure range: " + result.measureRange.start + "-" + result.measureRange.end)
+        }
+        
+        // Handle "first N measures" or "last N measures" patterns
+        var firstLastMatch = text.match(/\b(first|last)\s+(\d+|one|two|three|four|five|six|seven|eight)\s+(?:measures?|bars?)/i)
+        if (firstLastMatch && !result.measureRange) {
+            var numWords = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8}
+            var count = parseInt(firstLastMatch[2]) || numWords[firstLastMatch[2].toLowerCase()] || 1
+            var position = firstLastMatch[1].toLowerCase()
+            
+            if (position === "first") {
+                result.measureRange = { start: 1, end: count }
+            } else {
+                // For "last N", we'd need to know total measures - default to high range
+                result.measureRange = { start: 1, end: count } // Will be adjusted by caller
+            }
+            log("Extracted '" + position + " " + count + "' measure range: " + result.measureRange.start + "-" + result.measureRange.end)
         }
 
         // Pattern detection (for future use)
@@ -653,7 +706,59 @@ MuseScore {
     }
 
     /**
+     * Fill the remaining portion of a measure with rests
+     * Based on Python compiler's normalize_measure logic
+     */
+    function fillMeasureWithRests(cursor) {
+        if (!cursor.measure) {
+            console.log("No measure to fill")
+            return
+        }
+        
+        var measureStartTick = cursor.measure.firstSegment.tick
+        var measureEndTick = cursor.measure.lastSegment.tick
+        var currentTick = cursor.tick
+        
+        // Calculate remaining ticks
+        var remainingTicks = measureEndTick - currentTick
+        
+        if (remainingTicks <= 0) {
+            console.log("Measure is already full")
+            return
+        }
+        
+        console.log("Filling measure with " + remainingTicks + " ticks of rests")
+        log("Filling remaining measure with rests...")
+        
+        // Fill with appropriately-sized rests (32 ticks = quarter note in 4/4 time with divisions=32)
+        while (remainingTicks > 0) {
+            if (remainingTicks >= 32) {  // Quarter rest
+                cursor.setDuration(1, 4)
+                cursor.addRest()
+                remainingTicks -= 32
+                console.log("Added quarter rest")
+            } else if (remainingTicks >= 16) {  // Eighth rest
+                cursor.setDuration(1, 8)
+                cursor.addRest()
+                remainingTicks -= 16
+                console.log("Added eighth rest")
+            } else if (remainingTicks >= 8) {  // Sixteenth rest
+                cursor.setDuration(1, 16)
+                cursor.addRest()
+                remainingTicks -= 8
+                console.log("Added sixteenth rest")
+            } else {  // Thirty-second rest
+                cursor.setDuration(1, 32)
+                cursor.addRest()
+                remainingTicks -= 4
+                console.log("Added thirty-second rest")
+            }
+        }
+    }
+
+    /**
      * Insert notes from JSON notation into the score
+     * Uses separate undo transactions per measure to prevent crashes with large operations
      */
     function insertFromNotation(notation, startMeasure) {
         if (!curScore) {
@@ -661,35 +766,66 @@ MuseScore {
         }
 
         console.log("Starting note insertion at measure " + startMeasure)
+        log("Processing " + notation.measures.length + " measure(s)...")
 
-        curScore.startCmd()  // Begin undo transaction
-
+        // Phase 1: BULK DELETE - Clear all target measures in one transaction
+        console.log("Phase 1: Clearing measures " + startMeasure + " to " + (startMeasure + notation.measures.length - 1))
+        curScore.startCmd()
         try {
             var cursor = curScore.newCursor()
-
-            // CRITICAL: Set input state mode to sync with score (from mcp-musescore)
             cursor.inputStateMode = Cursor.INPUT_STATE_SYNC_WITH_SCORE
-
             cursor.rewind(Cursor.SCORE_START)
             cursor.staffIdx = 0
             cursor.voice = 0
-
-            // Navigate to start measure
-            if (!navigateToMeasure(cursor, startMeasure)) {
-                throw new Error("Could not navigate to measure " + startMeasure)
+            
+            // Navigate to first measure
+            if (navigateToMeasure(cursor, startMeasure)) {
+                var firstMeasure = cursor.measure
+                
+                // Navigate to last measure
+                if (navigateToMeasure(cursor, startMeasure + notation.measures.length - 1)) {
+                    var lastMeasure = cursor.measure
+                    
+                    // Select full range
+                    var startTick = firstMeasure.firstSegment.tick
+                    var endTick = lastMeasure.lastSegment.tick + 1
+                    
+                    console.log("Selecting ticks " + startTick + " to " + endTick)
+                    curScore.selection.selectRange(startTick, endTick, 0, 1)
+                    cmd("delete")
+                    curScore.selection.clear()
+                    console.log("Bulk delete complete")
+                }
             }
-
-            console.log("Navigated to measure " + startMeasure + " successfully")
-
-            // NOTE: We DON'T delete existing content - cursor.addNote() will replace it naturally
-            // The deleteRangeContent approach was causing issues with cursor position
-            console.log("Starting note insertion (addNote will replace existing content)")
-
-            // Process each measure
+        } finally {
+            curScore.endCmd()
+        }
+        
+        // Phase 2: BULK INSERT - Add all notes in one transaction
+        console.log("Phase 2: Inserting new content")
+        curScore.startCmd()
+        
+        try {
             for (var m = 0; m < notation.measures.length; m++) {
                 var measure = notation.measures[m]
                 var currentMeasureNum = startMeasure + m
-                console.log("Processing measure " + currentMeasureNum + " with " + measure.notes.length + " notes")
+                
+                console.log("========== Measure " + currentMeasureNum + " (" + (m+1) + "/" + notation.measures.length + ") ==========")
+                log("Measure " + currentMeasureNum + "/" + (startMeasure + notation.measures.length - 1))
+            
+            try {
+                var cursor = curScore.newCursor()
+                cursor.inputStateMode = Cursor.INPUT_STATE_SYNC_WITH_SCORE
+                cursor.rewind(Cursor.SCORE_START)
+                cursor.staffIdx = 0
+                cursor.voice = 0
+
+                if (!navigateToMeasure(cursor, currentMeasureNum)) {
+                    console.log("ERROR: Could not navigate to measure " + currentMeasureNum)
+                    continue  // Don't endCmd - we're in one big transaction
+                }
+                
+                // No need to clear - bulk delete already handled it
 
                 // Process notes with tuplet grouping
                 var n = 0
@@ -698,47 +834,64 @@ MuseScore {
                     var tupletInfo = getTupletInfo(noteData.duration)
                     
                     if (tupletInfo) {
-                        // This is a tuplet note - find all consecutive notes of same tuplet type
-                        var tupletGroup = [noteData]
-                        var tupletBaseType = tupletInfo.type  // e.g., "3" for triplets
+                        // This is a tuplet note - group by correct tuplet size
+                        var tupletSize = parseInt(tupletInfo.type)
+                        var tupletGroup = []
                         
-                        // Look ahead to find more notes in this tuplet
-                        var lookAhead = n + 1
-                        while (lookAhead < measure.notes.length) {
-                            var nextNote = measure.notes[lookAhead]
-                            var nextTupletInfo = getTupletInfo(nextNote.duration)
-                            if (nextTupletInfo && nextTupletInfo.type === tupletBaseType) {
-                                tupletGroup.push(nextNote)
-                                lookAhead++
+                        for (var i = 0; i < tupletSize && (n + i) < measure.notes.length; i++) {
+                            var checkNote = measure.notes[n + i]
+                            var checkInfo = getTupletInfo(checkNote.duration)
+                            if (checkInfo && checkInfo.type === tupletInfo.type) {
+                                tupletGroup.push(checkNote)
                             } else {
                                 break
                             }
                         }
                         
-                        console.log("Found tuplet group of " + tupletGroup.length + " notes, type: " + tupletBaseType)
-                        
-                        // Add the tuplet group
-                        addTupletGroup(cursor, tupletGroup, tupletInfo)
-                        
-                        // Skip past all notes we just processed
-                        n = lookAhead
+                        if (tupletGroup.length === tupletSize) {
+                            addTupletGroup(cursor, tupletGroup, tupletInfo)
+                            n += tupletSize
+                        } else {
+                            for (var j = 0; j < tupletGroup.length; j++) {
+                                addNoteFromJSON(cursor, tupletGroup[j])
+                            }
+                            n += tupletGroup.length
+                        }
                     } else {
-                        // Regular note - add normally
+                        // Regular note
                         addNoteFromJSON(cursor, noteData)
                         n++
                     }
                 }
 
-                console.log("Completed measure " + currentMeasureNum)
-                // Note: cursor.next() in addNoteFromJSON already advances us through the measure
-                // No need to explicitly move to next measure - the cursor is already there
+                // Log cursor position BEFORE filling rests
+                console.log("After notes - cursor at tick " + cursor.tick + ", measure: " + (cursor.measure ? cursor.measure.no : "null"))
+                
+                // Fill remaining space with rests - only if cursor is still in the target measure
+                var targetMeasure = cursor.measure
+                if (targetMeasure && targetMeasure.no === currentMeasureNum - 1) {  // no is 0-indexed
+                    fillMeasureWithRests(cursor)
+                } else {
+                    console.log("WARNING: Cursor drifted to measure " + (targetMeasure ? targetMeasure.no + 1 : "null") + ", skipping rest fill")
+                }
+                
+                // Log cursor position AFTER filling rests
+                console.log("After rest fill - cursor at tick " + cursor.tick + ", measure: " + (cursor.measure ? cursor.measure.no : "null"))
+                
+                console.log("========== Measure " + currentMeasureNum + " COMPLETE ==========")
+                
+            } catch (e) {
+                console.log("ERROR in measure " + currentMeasureNum + ": " + e.toString())
+                log("⚠ Error in measure " + currentMeasureNum)
             }
-
-            console.log("Note insertion completed successfully")
-
+        }  // End of measure loop
+        
         } finally {
-            curScore.endCmd()  // End undo transaction (even if error occurs)
+            curScore.endCmd()  // End bulk insert transaction
         }
+
+        console.log("Note insertion completed successfully")
+        log("✓ Generation complete!")
     }
 
     /**
@@ -777,25 +930,19 @@ MuseScore {
             "W": 1, "H": 2, "Q": 4, "E": 8, "S": 16, "T": 32
         }[tupletInfo.baseDuration] || 8
         
-        if (tupletRatio === 3) {
-            // Triplet: 3 notes in time of 2
-            totalNumerator = 2
-            totalDenominator = baseDen
-            noteNumerator = 1
-            noteDenominator = baseDen
-        } else if (tupletRatio === 5) {
-            // Quintuplet: 5 notes in time of 4
-            totalNumerator = 4
-            totalDenominator = baseDen
-            noteNumerator = 1
-            noteDenominator = baseDen
-        } else if (tupletRatio === 7) {
-            // Septuplet: 7 notes in time of 4
-            totalNumerator = 4
-            totalDenominator = baseDen
-            noteNumerator = 1
-            noteDenominator = baseDen
-        }
+        // ALL tuplets use N:2 ratio (N notes in time of 2 normal notes)
+        // This gives: triplets=12/measure, quintuplets=20/measure, sevenlets=28/measure
+        // Triplet: 3:2 (3 notes in time of 2 eighths = 1 beat)
+        // Quintuplet: 5:2 (5 notes in time of 2 eighths = 1 beat)
+        // Sevenlet: 7:2 (7 notes in time of 2 eighths = 1 beat)
+        var normalNotes = 2  // Always 2 for all tuplet types
+        
+        // Total duration = 2 × base note value = 1 beat
+        // For E-based: 2/8 = 1/4 (quarter note)
+        totalNumerator = 2
+        totalDenominator = baseDen
+        noteNumerator = 1
+        noteDenominator = baseDen
         
         console.log("Tuplet total duration: " + totalNumerator + "/" + totalDenominator)
         console.log("Each note duration: " + noteNumerator + "/" + noteDenominator)
@@ -804,8 +951,8 @@ MuseScore {
         // addTuplet(ratio, duration) where ratio = actual/normal, duration = total time span
         try {
             cursor.addTuplet(
-                fraction(tupletRatio, tupletRatio === 3 ? 2 : 4),  // ratio: 3/2 for triplets, 5/4 or 7/4 for others
-                fraction(totalNumerator, totalDenominator)          // total duration
+                fraction(tupletRatio, normalNotes),                   // ratio: 3/2, 5/2, or 7/2
+                fraction(totalNumerator, totalDenominator)            // total duration: 2/8 = 1/4
             )
             console.log("Tuplet bracket created")
         } catch (e) {
@@ -818,22 +965,24 @@ MuseScore {
             return
         }
         
-        // Set duration for notes within the tuplet
+        // Set duration for notes within the tuplet - ONCE before adding all notes
         cursor.setDuration(noteNumerator, noteDenominator)
+        log("Creating " + tupletRatio + "-tuplet with " + notes.length + " notes")
         
         // Add each note in the tuplet
+        // IMPORTANT: Don't manually rewind/advance - let the tuplet handle cursor state
         for (var i = 0; i < notes.length; i++) {
             var noteData = notes[i]
-            var startTick = cursor.tick
             
-            // Add the note (pitch 38 = snare)
-            console.log("Adding tuplet note " + (i+1) + " of " + notes.length)
+            console.log("Adding tuplet note " + (i+1) + " of " + notes.length + " at tick " + cursor.tick)
+            
+            // Simply add the note - cursor will auto-advance
             cursor.addNote(38)
             
-            // Rewind to add embellishments
-            cursor.rewindToTick(startTick)
+            // Move cursor back to access the note we just added for embellishments
+            cursor.prev()
             
-            if (cursor.element) {
+            if (cursor.element && cursor.element.type === Element.CHORD) {
                 // Add embellishments if any
                 if (noteData.embellishments && noteData.embellishments.length > 0) {
                     for (var e = 0; e < noteData.embellishments.length; e++) {
@@ -845,11 +994,10 @@ MuseScore {
                 if (noteData.sticking) {
                     addSticking(cursor, noteData.sticking)
                 }
-                
-                // Advance cursor
-                var durationTicks = cursor.element.duration.ticks
-                cursor.rewindToTick(startTick + durationTicks)
             }
+            
+            // Move forward to next position
+            cursor.next()
         }
         
         console.log("Tuplet group complete")
@@ -885,46 +1033,84 @@ MuseScore {
     }
 
     /**
+     * Clear content of the current measure (where cursor is positioned)
+     * Uses selection + delete approach for single measure - more stable than bulk operations
+     */
+    function clearMeasureContent(cursor) {
+        var measure = cursor.measure
+        if (!measure) {
+            console.log("WARNING: No measure at cursor position")
+            return
+        }
+        
+        var startTick = measure.firstSegment.tick
+        var endTick = measure.lastSegment.tick + 1
+        
+        console.log("Clearing measure content from tick " + startTick + " to " + endTick)
+        
+        // Select just this measure and delete
+        curScore.selection.selectRange(startTick, endTick, 0, 1)
+        cmd("delete")
+        curScore.selection.clear()
+        
+        console.log("Measure cleared")
+    }
+
+    /**
      * Delete existing content in a range of measures
      * This removes notes/rests so new content can be properly inserted
      * Uses MuseScore's selection + cmd("delete") approach from mcp-musescore
      */
     function deleteRangeContent(cursor, startMeasure, endMeasure) {
-        console.log("Deleting content from measures " + startMeasure + " to " + endMeasure)
+        console.log("Clearing content from measures " + startMeasure + " to " + endMeasure)
 
-        // Navigate to start of range
-        cursor.rewind(Cursor.SCORE_START)
-        cursor.staffIdx = 0
-        cursor.voice = 0
+        // Collect all elements to delete first (safer than deleting while iterating)
+        var elementsToDelete = []
+        
+        for (var measureNum = startMeasure; measureNum <= endMeasure; measureNum++) {
+            cursor.rewind(Cursor.SCORE_START)
+            cursor.staffIdx = 0
+            cursor.voice = 0
 
-        if (!navigateToMeasure(cursor, startMeasure)) {
-            console.log("ERROR: Could not navigate to start measure for deletion")
-            return
+            if (!navigateToMeasure(cursor, measureNum)) {
+                console.log("WARNING: Could not navigate to measure " + measureNum)
+                continue
+            }
+
+            var measure = cursor.measure
+            if (!measure) {
+                console.log("WARNING: No measure found at " + measureNum)
+                continue
+            }
+
+            // Collect ChordRest segments
+            var segment = measure.firstSegment
+            while (segment && segment.tick < measure.lastSegment.tick) {
+                if (segment.segmentType === Segment.ChordRest) {
+                    var element = segment.elementAt(0)
+                    if (element) {
+                        elementsToDelete.push(element)
+                    }
+                }
+                segment = segment.next
+            }
         }
-
-        var startTick = cursor.tick
-        console.log("Start tick: " + startTick)
-
-        // Navigate to end of range
-        if (!navigateToMeasure(cursor, endMeasure + 1)) {
-            // If can't navigate to end+1, go to end and advance to end of that measure
-            navigateToMeasure(cursor, endMeasure)
-            cursor.nextMeasure()
+        
+        console.log("Collected " + elementsToDelete.length + " elements to delete")
+        
+        // Delete in reverse order (safer for score structure)
+        for (var i = elementsToDelete.length - 1; i >= 0; i--) {
+            try {
+                removeElement(elementsToDelete[i])
+                if (i % 20 === 0) {
+                    console.log("Deleted " + (elementsToDelete.length - i) + "/" + elementsToDelete.length + " elements")
+                }
+            } catch (e) {
+                console.log("ERROR removing element: " + e.toString())
+            }
         }
-
-        var endTick = cursor.tick
-        console.log("End tick: " + endTick)
-
-        // Select the range
-        curScore.selection.selectRange(startTick, endTick, 0, 1)
-        console.log("Selected range from tick " + startTick + " to " + endTick)
-
-        // Delete using MuseScore's built-in delete command
-        cmd("delete")
-        console.log("Content deletion completed")
-
-        // Clear selection
-        curScore.selection.clear()
+        
+        console.log("Content clearing completed")
     }
 
     /**
