@@ -86,21 +86,43 @@ CRITICAL: When the user asks for "fivelets" or "quintuplets", use duration E5/Q5
 
       // Add context if provided
       if (context && context.measures && context.measures.length > 0) {
-        systemPrompt += `\n\n**CURRENT SCORE CONTEXT:**\nThe user's score currently contains the following in the target measure(s):\n${JSON.stringify(context, null, 2)}
+        systemPrompt += `\n\n**CURRENT SCORE CONTEXT:**
+The user's score currently contains the following in the target measure(s):
+${JSON.stringify(context, null, 2)}
 
-**CONTEXT-AWARE COMMANDS:**
-When the user says "change", "modify", "replace", or specifies parts like "first two beats" or "last beat", use this context to understand what currently exists and what portion to modify.
+**CONTEXT-AWARE COMMANDS - INTELLIGENT MERGING:**
+When the user specifies PARTIAL measure modifications (e.g., "first two beats", "last beat"), you must INTELLIGENTLY MERGE the changes with existing content:
 
-For partial measure modifications (e.g., "first two beats"):
-- Generate ONLY the requested portion 
-- The plugin will handle filling the rest of the measure or preserving existing content
+1. **Parse the request** to understand which beats to modify
+2. **Preserve existing content** in beats that aren't being changed
+3. **Generate a COMPLETE measure** with the merged result
 
-Example: If user says "make the first two beats quintuplets" in 4/4 time:
-- Generate 10 notes (2 beats × 5 quintuplets per beat) with duration E5
-- The result will be a partial measure
+**Example 1: Partial replacement with existing content**
+Context: Measure 1 has 12 E3 notes (triplets filling all 4 beats in 4/4)
+User says: "make the first two beats of measure 1 into quintuplets"
 
-Example: If user says "change measure 1 to triplets" and measure 1 currently has quarter notes:
-- Replace the entire measure with triplets (12 E3 notes for 4/4 time)`;
+YOU MUST GENERATE:
+- Beats 1-2: 10 E5 notes (quintuplets)
+- Beats 3-4: 6 E3 notes (PRESERVE the existing triplets from context)
+Total: 16 notes in the measure
+
+**Example 2: Partial replacement with empty measure**
+Context: Measure 1 is empty (or whole rest)
+User says: "make the first two beats quintuplets"
+
+YOU MUST GENERATE:
+- Beats 1-2:  notes (quintuplets)
+- Beats 3-4: Will be filled with rests automatically by plugin
+Total: 10 notes (partial measure is OK here)
+
+**Example 3: Full replacement**
+Context: Measure 1 has quarter notes
+User says: "change measure 1 to triplets"
+
+YOU MUST GENERATE:
+- All 4 beats: 12 E3 notes (replacing everything)
+
+**CRITICAL:** Always generate COMPLETE measures by merging changes with existing context when user specifies partial modifications like "first N beats" or "last beat".`;
       }
 
       const response = await anthropic.beta.messages.create({
