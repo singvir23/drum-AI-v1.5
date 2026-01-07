@@ -23,6 +23,18 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ error: "Prompt is required" });
     }
 
+    // Limit measures to prevent JSON truncation (Claude response too long)
+    const MAX_MEASURES = 16;
+    const measureMatch = prompt.match(/(\d+)\s*measures?/i);
+    let adjustedPrompt = prompt;
+    if (measureMatch) {
+      const requestedMeasures = parseInt(measureMatch[1]);
+      if (requestedMeasures > MAX_MEASURES) {
+        console.log(`DEBUG: Requested ${requestedMeasures} measures, limiting to ${MAX_MEASURES}`);
+        adjustedPrompt = prompt.replace(/(\d+)\s*measures?/i, `${MAX_MEASURES} measures`);
+      }
+    }
+
     // Use API key from request body if provided, otherwise fall back to environment variable
     const effectiveApiKey = apiKey || process.env.ANTHROPIC_API_KEY;
 
@@ -134,7 +146,7 @@ DO NOT convert context triplets (E3) to regular eighths (E). COPY THE EXACT STRI
         messages: [
           {
             role: "user",
-            content: prompt
+            content: adjustedPrompt
           }
         ],
         system: systemPrompt,
