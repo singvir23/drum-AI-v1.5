@@ -91,180 +91,182 @@ The user's score currently contains the following in the target measure(s):
 ${JSON.stringify(context, null, 2)}
 
 **CONTEXT-AWARE COMMANDS - INTELLIGENT MERGING:**
-When the user specifies PARTIAL measure modifications (e.g., "first two beats", "last beat"), you must INTELLIGENTLY MERGE the changes with existing content:
+When the user specifies PARTIAL measure modifications (e.g., "first two beats", "last beat"), you must INTELLIGENTLY MERGE by:
 
 1. **Parse the request** to understand which beats to modify
-2. **Preserve existing content** in beats that aren't being changed
+2. **Preserve EXACT duration codes** from context for unmodified beats
 3. **Generate a COMPLETE measure** with the merged result
 
+**CRITICAL: When preserving existing notes, copy their EXACT duration codes from the context (E3, Q5, etc.), not just the count!**
+
 **Example 1: Partial replacement with existing content**
-Context: Measure 1 has 12 E3 notes (triplets filling all 4 beats in 4/4)
+Context shows: 12 notes with duration "E3" (triplets filling all 4 beats in 4/4)
 User says: "make the first two beats of measure 1 into quintuplets"
 
 YOU MUST GENERATE:
-- Beats 1-2: 10 E5 notes (quintuplets)
-- Beats 3-4: 6 E3 notes (PRESERVE the existing triplets from context)
-Total: 16 notes in the measure
+- Beats 1-2: 10 notes with duration "E5" (quintuplets)
+- Beats 3-4: 6 notes with duration "E3" (COPY EXACT duration from context, NOT plain "E"!)
+Result: First 10 notes are E5, last 6 notes are E3
 
 **Example 2: Partial replacement with empty measure**
-Context: Measure 1 is empty (or whole rest)
+Context: Measure 1 is empty (whole rest)
 User says: "make the first two beats quintuplets"
 
 YOU MUST GENERATE:
-- Beats 1-2:  notes (quintuplets)
-- Beats 3-4: Will be filled with rests automatically by plugin
-Total: 10 notes (partial measure is OK here)
+- Beats 1-2: 10 notes with duration "E5"
+- Beats 3-4: Will be auto-filled with rests by plugin
+Result: 10 notes (partial measure OK)
 
 **Example 3: Full replacement**
-Context: Measure 1 has quarter notes
+Context: Measure has any content
 User says: "change measure 1 to triplets"
 
 YOU MUST GENERATE:
-- All 4 beats: 12 E3 notes (replacing everything)
-
-**CRITICAL:** Always generate COMPLETE measures by merging changes with existing context when user specifies partial modifications like "first N beats" or "last beat".`;
+- All 4 beats: 12 notes with duration "E3"
+Result: Replace everything`;
       }
+    }
 
       const response = await anthropic.beta.messages.create({
-        model: "claude-sonnet-4-5-20250929",
-        max_tokens: 4096,
-        betas: ["structured-outputs-2025-11-13"],
-        messages: [
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-        system: systemPrompt,
-        output_format: {
-          type: "json_schema",
-          schema: {
-            type: "object",
-            properties: {
-              timeSignature: {
-                type: "array",
-                items: { type: "integer" }
-              },
-              measures: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    notes: {
-                      type: "array",
-                      items: {
-                        type: "object",
-                        properties: {
-                          sticking: {
-                            type: "string",
-                            enum: ["R", "L"]
-                          },
-                          duration: {
-                            type: "string",
-                            enum: ["W", "H", "Q", "E", "S", "T", "Q3", "E3", "S3", "Q5", "E5", "S5", "Q7", "E7", "S7", "WR", "HR", "QR", "ER", "SR", "TR"]
-                          },
-                          embellishments: {
-                            type: "array",
-                            items: {
-                              type: "string",
-                              enum: ["X", "F", "D", "G"]
-                            }
-                          }
-                        },
-                        required: ["sticking", "duration"],
-                        additionalProperties: false
-                      }
-                    }
-                  },
-                  required: ["notes"],
-                  additionalProperties: false
-                }
-              }
-            },
-            required: ["timeSignature", "measures"],
-            additionalProperties: false
-          }
+      model: "claude-sonnet-4-5-20250929",
+      max_tokens: 4096,
+      betas: ["structured-outputs-2025-11-13"],
+      messages: [
+        {
+          role: "user",
+          content: prompt
         }
-      });
-
-      drumNotationJSON = JSON.parse(response.content[0].text);
-      console.log("DEBUG: Claude response JSON:", JSON.stringify(drumNotationJSON, null, 2));
-    } catch (err) {
-      console.error("DEBUG: Claude API call failed:", err);
-      return res.status(500).json({
-        error: "Claude API error",
-        details: err.message || err
-      });
-    }
-
-    if (!drumNotationJSON || !drumNotationJSON.measures) {
-      console.error("DEBUG: Invalid JSON structure from Claude");
-      return res.status(500).json({
-        error: "Invalid JSON structure returned from Claude"
-      });
-    }
-
-    // 4. Call AWS Lambda with JSON notation
-    let compiledXml = null;
-    try {
-      console.log("DEBUG: About to call AWS Lambda...");
-
-      const compileRes = await fetch(LAMBDA_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          jsonNotation: drumNotationJSON
-        }),
-      });
-
-      // Log the status, text, etc. from AWS Lambda
-      console.log("DEBUG: Lambda response status:", compileRes.status);
-      const rawLambdaText = await compileRes.text();
-      console.log("DEBUG: Lambda raw response text:", rawLambdaText);
-
-      // If compileRes not OK
-      if (!compileRes.ok) {
-        return res.status(500).json({
-          error: "Compiler failed",
-          details: rawLambdaText,
-          notation: drumNotationJSON
-        });
+      ],
+      system: systemPrompt,
+      output_format: {
+        type: "json_schema",
+        schema: {
+          type: "object",
+          properties: {
+            timeSignature: {
+              type: "array",
+              items: { type: "integer" }
+            },
+            measures: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  notes: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        sticking: {
+                          type: "string",
+                          enum: ["R", "L"]
+                        },
+                        duration: {
+                          type: "string",
+                          enum: ["W", "H", "Q", "E", "S", "T", "Q3", "E3", "S3", "Q5", "E5", "S5", "Q7", "E7", "S7", "WR", "HR", "QR", "ER", "SR", "TR"]
+                        },
+                        embellishments: {
+                          type: "array",
+                          items: {
+                            type: "string",
+                            enum: ["X", "F", "D", "G"]
+                          }
+                        }
+                      },
+                      required: ["sticking", "duration"],
+                      additionalProperties: false
+                    }
+                  }
+                },
+                required: ["notes"],
+                additionalProperties: false
+              }
+            }
+          },
+          required: ["timeSignature", "measures"],
+          additionalProperties: false
+        }
       }
+    });
 
-      // Parse the Lambda JSON response
-      const data = JSON.parse(rawLambdaText);
-      console.log("DEBUG: Lambda parsed data:", data);
+    drumNotationJSON = JSON.parse(response.content[0].text);
+    console.log("DEBUG: Claude response JSON:", JSON.stringify(drumNotationJSON, null, 2));
+  } catch (err) {
+    console.error("DEBUG: Claude API call failed:", err);
+    return res.status(500).json({
+      error: "Claude API error",
+      details: err.message || err
+    });
+  }
 
-      // Directly access 'xml' from the response
-      compiledXml = data.xml;
+  if (!drumNotationJSON || !drumNotationJSON.measures) {
+    console.error("DEBUG: Invalid JSON structure from Claude");
+    return res.status(500).json({
+      error: "Invalid JSON structure returned from Claude"
+    });
+  }
 
-      if (!compiledXml) {
-        throw new Error("No XML returned from compiler");
-      }
+  // 4. Call AWS Lambda with JSON notation
+  let compiledXml = null;
+  try {
+    console.log("DEBUG: About to call AWS Lambda...");
 
-    } catch (err) {
-      console.error("DEBUG: Error calling AWS Lambda:", err);
+    const compileRes = await fetch(LAMBDA_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        jsonNotation: drumNotationJSON
+      }),
+    });
+
+    // Log the status, text, etc. from AWS Lambda
+    console.log("DEBUG: Lambda response status:", compileRes.status);
+    const rawLambdaText = await compileRes.text();
+    console.log("DEBUG: Lambda raw response text:", rawLambdaText);
+
+    // If compileRes not OK
+    if (!compileRes.ok) {
       return res.status(500).json({
-        error: "Failed to call AWS Lambda compiler",
-        details: err.message,
+        error: "Compiler failed",
+        details: rawLambdaText,
         notation: drumNotationJSON
       });
     }
 
-    // 5. Return JSON: { xml, notation }
-    console.log("DEBUG: Final success, returning 200");
-    return res.status(200).json({
-      xml: compiledXml,              // from Lambda
-      notation: drumNotationJSON,    // from Claude
-    });
+    // Parse the Lambda JSON response
+    const data = JSON.parse(rawLambdaText);
+    console.log("DEBUG: Lambda parsed data:", data);
 
-  } catch (error) {
-    console.error("DEBUG: Outer catch, API Error:", error);
+    // Directly access 'xml' from the response
+    compiledXml = data.xml;
+
+    if (!compiledXml) {
+      throw new Error("No XML returned from compiler");
+    }
+
+  } catch (err) {
+    console.error("DEBUG: Error calling AWS Lambda:", err);
     return res.status(500).json({
-      error: "Server error",
-      details: error.message
+      error: "Failed to call AWS Lambda compiler",
+      details: err.message,
+      notation: drumNotationJSON
     });
   }
+
+  // 5. Return JSON: { xml, notation }
+  console.log("DEBUG: Final success, returning 200");
+  return res.status(200).json({
+    xml: compiledXml,              // from Lambda
+    notation: drumNotationJSON,    // from Claude
+  });
+
+} catch (error) {
+  console.error("DEBUG: Outer catch, API Error:", error);
+  return res.status(500).json({
+    error: "Server error",
+    details: error.message
+  });
+}
 });
 
 module.exports = router;
