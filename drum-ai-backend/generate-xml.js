@@ -125,148 +125,147 @@ YOU MUST GENERATE:
 - All 4 beats: 12 notes with duration "E3"
 Result: Replace everything`;
       }
-    }
 
       const response = await anthropic.beta.messages.create({
-      model: "claude-sonnet-4-5-20250929",
-      max_tokens: 4096,
-      betas: ["structured-outputs-2025-11-13"],
-      messages: [
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
-      system: systemPrompt,
-      output_format: {
-        type: "json_schema",
-        schema: {
-          type: "object",
-          properties: {
-            timeSignature: {
-              type: "array",
-              items: { type: "integer" }
-            },
-            measures: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  notes: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        sticking: {
-                          type: "string",
-                          enum: ["R", "L"]
-                        },
-                        duration: {
-                          type: "string",
-                          enum: ["W", "H", "Q", "E", "S", "T", "Q3", "E3", "S3", "Q5", "E5", "S5", "Q7", "E7", "S7", "WR", "HR", "QR", "ER", "SR", "TR"]
-                        },
-                        embellishments: {
-                          type: "array",
-                          items: {
+        model: "claude-sonnet-4-5-20250929",
+        max_tokens: 4096,
+        betas: ["structured-outputs-2025-11-13"],
+        messages: [
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        system: systemPrompt,
+        output_format: {
+          type: "json_schema",
+          schema: {
+            type: "object",
+            properties: {
+              timeSignature: {
+                type: "array",
+                items: { type: "integer" }
+              },
+              measures: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    notes: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        properties: {
+                          sticking: {
                             type: "string",
-                            enum: ["X", "F", "D", "G"]
+                            enum: ["R", "L"]
+                          },
+                          duration: {
+                            type: "string",
+                            enum: ["W", "H", "Q", "E", "S", "T", "Q3", "E3", "S3", "Q5", "E5", "S5", "Q7", "E7", "S7", "WR", "HR", "QR", "ER", "SR", "TR"]
+                          },
+                          embellishments: {
+                            type: "array",
+                            items: {
+                              type: "string",
+                              enum: ["X", "F", "D", "G"]
+                            }
                           }
-                        }
-                      },
-                      required: ["sticking", "duration"],
-                      additionalProperties: false
+                        },
+                        required: ["sticking", "duration"],
+                        additionalProperties: false
+                      }
                     }
-                  }
-                },
-                required: ["notes"],
-                additionalProperties: false
+                  },
+                  required: ["notes"],
+                  additionalProperties: false
+                }
               }
-            }
-          },
-          required: ["timeSignature", "measures"],
-          additionalProperties: false
+            },
+            required: ["timeSignature", "measures"],
+            additionalProperties: false
+          }
         }
-      }
-    });
+      });
 
-    drumNotationJSON = JSON.parse(response.content[0].text);
-    console.log("DEBUG: Claude response JSON:", JSON.stringify(drumNotationJSON, null, 2));
-  } catch (err) {
-    console.error("DEBUG: Claude API call failed:", err);
-    return res.status(500).json({
-      error: "Claude API error",
-      details: err.message || err
-    });
-  }
-
-  if (!drumNotationJSON || !drumNotationJSON.measures) {
-    console.error("DEBUG: Invalid JSON structure from Claude");
-    return res.status(500).json({
-      error: "Invalid JSON structure returned from Claude"
-    });
-  }
-
-  // 4. Call AWS Lambda with JSON notation
-  let compiledXml = null;
-  try {
-    console.log("DEBUG: About to call AWS Lambda...");
-
-    const compileRes = await fetch(LAMBDA_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        jsonNotation: drumNotationJSON
-      }),
-    });
-
-    // Log the status, text, etc. from AWS Lambda
-    console.log("DEBUG: Lambda response status:", compileRes.status);
-    const rawLambdaText = await compileRes.text();
-    console.log("DEBUG: Lambda raw response text:", rawLambdaText);
-
-    // If compileRes not OK
-    if (!compileRes.ok) {
+      drumNotationJSON = JSON.parse(response.content[0].text);
+      console.log("DEBUG: Claude response JSON:", JSON.stringify(drumNotationJSON, null, 2));
+    } catch (err) {
+      console.error("DEBUG: Claude API call failed:", err);
       return res.status(500).json({
-        error: "Compiler failed",
-        details: rawLambdaText,
+        error: "Claude API error",
+        details: err.message || err
+      });
+    }
+
+    if (!drumNotationJSON || !drumNotationJSON.measures) {
+      console.error("DEBUG: Invalid JSON structure from Claude");
+      return res.status(500).json({
+        error: "Invalid JSON structure returned from Claude"
+      });
+    }
+
+    // 4. Call AWS Lambda with JSON notation
+    let compiledXml = null;
+    try {
+      console.log("DEBUG: About to call AWS Lambda...");
+
+      const compileRes = await fetch(LAMBDA_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jsonNotation: drumNotationJSON
+        }),
+      });
+
+      // Log the status, text, etc. from AWS Lambda
+      console.log("DEBUG: Lambda response status:", compileRes.status);
+      const rawLambdaText = await compileRes.text();
+      console.log("DEBUG: Lambda raw response text:", rawLambdaText);
+
+      // If compileRes not OK
+      if (!compileRes.ok) {
+        return res.status(500).json({
+          error: "Compiler failed",
+          details: rawLambdaText,
+          notation: drumNotationJSON
+        });
+      }
+
+      // Parse the Lambda JSON response
+      const data = JSON.parse(rawLambdaText);
+      console.log("DEBUG: Lambda parsed data:", data);
+
+      // Directly access 'xml' from the response
+      compiledXml = data.xml;
+
+      if (!compiledXml) {
+        throw new Error("No XML returned from compiler");
+      }
+
+    } catch (err) {
+      console.error("DEBUG: Error calling AWS Lambda:", err);
+      return res.status(500).json({
+        error: "Failed to call AWS Lambda compiler",
+        details: err.message,
         notation: drumNotationJSON
       });
     }
 
-    // Parse the Lambda JSON response
-    const data = JSON.parse(rawLambdaText);
-    console.log("DEBUG: Lambda parsed data:", data);
+    // 5. Return JSON: { xml, notation }
+    console.log("DEBUG: Final success, returning 200");
+    return res.status(200).json({
+      xml: compiledXml,              // from Lambda
+      notation: drumNotationJSON,    // from Claude
+    });
 
-    // Directly access 'xml' from the response
-    compiledXml = data.xml;
-
-    if (!compiledXml) {
-      throw new Error("No XML returned from compiler");
-    }
-
-  } catch (err) {
-    console.error("DEBUG: Error calling AWS Lambda:", err);
+  } catch (error) {
+    console.error("DEBUG: Outer catch, API Error:", error);
     return res.status(500).json({
-      error: "Failed to call AWS Lambda compiler",
-      details: err.message,
-      notation: drumNotationJSON
+      error: "Server error",
+      details: error.message
     });
   }
-
-  // 5. Return JSON: { xml, notation }
-  console.log("DEBUG: Final success, returning 200");
-  return res.status(200).json({
-    xml: compiledXml,              // from Lambda
-    notation: drumNotationJSON,    // from Claude
-  });
-
-} catch (error) {
-  console.error("DEBUG: Outer catch, API Error:", error);
-  return res.status(500).json({
-    error: "Server error",
-    details: error.message
-  });
-}
 });
 
 module.exports = router;
