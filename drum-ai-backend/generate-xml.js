@@ -214,58 +214,11 @@ DO NOT convert context triplets (E3) to regular eighths (E). COPY THE EXACT STRI
       });
     }
 
-    // 4. Call AWS Lambda with JSON notation
-    let compiledXml = null;
-    try {
-      console.log("DEBUG: About to call AWS Lambda...");
-
-      const compileRes = await fetch(LAMBDA_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          jsonNotation: drumNotationJSON
-        }),
-      });
-
-      // Log the status, text, etc. from AWS Lambda
-      console.log("DEBUG: Lambda response status:", compileRes.status);
-      const rawLambdaText = await compileRes.text();
-      console.log("DEBUG: Lambda raw response text:", rawLambdaText);
-
-      // If compileRes not OK
-      if (!compileRes.ok) {
-        return res.status(500).json({
-          error: "Compiler failed",
-          details: rawLambdaText,
-          notation: drumNotationJSON
-        });
-      }
-
-      // Parse the Lambda JSON response
-      const data = JSON.parse(rawLambdaText);
-      console.log("DEBUG: Lambda parsed data:", data);
-
-      // Directly access 'xml' from the response
-      compiledXml = data.xml;
-
-      if (!compiledXml) {
-        throw new Error("No XML returned from compiler");
-      }
-
-    } catch (err) {
-      console.error("DEBUG: Error calling AWS Lambda:", err);
-      return res.status(500).json({
-        error: "Failed to call AWS Lambda compiler",
-        details: err.message,
-        notation: drumNotationJSON
-      });
-    }
-
-    // 5. Return JSON: { xml, notation }
-    console.log("DEBUG: Final success, returning 200");
+    // Return JSON notation directly - plugin uses JSON, not XML
+    // Lambda/MusicXML step removed for performance
+    console.log("DEBUG: Success, returning notation JSON");
     return res.status(200).json({
-      xml: compiledXml,              // from Lambda
-      notation: drumNotationJSON,    // from Claude
+      notation: drumNotationJSON
     });
 
   } catch (error) {
