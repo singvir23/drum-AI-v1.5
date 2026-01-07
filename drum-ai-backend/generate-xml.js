@@ -87,43 +87,52 @@ CRITICAL: When the user asks for "fivelets" or "quintuplets", use duration E5/Q5
       // Add context if provided
       if (context && context.measures && context.measures.length > 0) {
         systemPrompt += `\n\n**CURRENT SCORE CONTEXT:**
-The user's score currently contains the following in the target measure(s):
 ${JSON.stringify(context, null, 2)}
 
-**CONTEXT-AWARE COMMANDS - INTELLIGENT MERGING:**
-When the user specifies PARTIAL measure modifications (e.g., "first two beats", "last beat"), you must INTELLIGENTLY MERGE by:
+**CRITICAL CONTEXT RULE:**
+When user says "first N beats", you MUST copy the EXACT "duration" field value from context for the remaining beats.
 
-1. **Parse the request** to understand which beats to modify
-2. **Preserve EXACT duration codes** from context for unmodified beats
-3. **Generate a COMPLETE measure** with the merged result
+**EXAMPLE - Step by step:**
 
-**CRITICAL: When preserving existing notes, copy their EXACT duration codes from the context (E3, Q5, etc.), not just the count!**
+CONTEXT shows measure 1 contains:
+{ "duration": "E3", "sticking": "R" }, { "duration": "E3", "sticking": "L" }, ... (12 total, all "E3")
 
-**Example 1: Partial replacement with existing content**
-Context shows: 12 notes with duration "E3" (triplets filling all 4 beats in 4/4)
-User says: "make the first two beats of measure 1 into quintuplets"
+USER says: "make the first two beats quintuplets"
 
-YOU MUST GENERATE:
-- Beats 1-2: 10 notes with duration "E5" (quintuplets)
-- Beats 3-4: 6 notes with duration "E3" (COPY EXACT duration from context, NOT plain "E"!)
-Result: First 10 notes are E5, last 6 notes are E3
+STEP 1: Calculate beats
+- 4/4 time, first 2 beats = 10 E5 notes
+- Remaining 2 beats from context = 6 notes starting from note index 10
 
-**Example 2: Partial replacement with empty measure**
-Context: Measure 1 is empty (whole rest)
-User says: "make the first two beats quintuplets"
+STEP 2: Copy EXACT duration from context for beats 3-4
+- Context notes[10] has duration:"E3" → USE "E3" (NOT "E")
+- Context notes[11] has duration:"E3" → USE "E3" (NOT "E")
+- ... all 6 remaining notes have "E3"
 
-YOU MUST GENERATE:
-- Beats 1-2: 10 notes with duration "E5"
-- Beats 3-4: Will be auto-filled with rests by plugin
-Result: 10 notes (partial measure OK)
+STEP 3: Generate merged JSON:
+{
+  "measures": [{
+    "notes": [
+      {"sticking": "R", "duration": "E5"},  // beat 1-2: NEW
+      {"sticking": "L", "duration": "E5"},
+      {"sticking": "R", "duration": "E5"},
+      {"sticking": "L", "duration": "E5"},
+      {"sticking": "R", "duration": "E5"},
+      {"sticking": "L", "duration": "E5"},
+      {"sticking": "R", "duration": "E5"},
+      {"sticking": "L", "duration": "E5"},
+      {"sticking": "R", "duration": "E5"},
+      {"sticking": "L", "duration": "E5"},
+      {"sticking": "R", "duration": "E3"},  // beat 3-4: FROM CONTEXT
+      {"sticking": "L", "duration": "E3"},  // ← MUST BE "E3" NOT "E"!
+      {"sticking": "R", "duration": "E3"},
+      {"sticking": "L", "duration": "E3"},
+      {"sticking": "R", "duration": "E3"},
+      {"sticking": "L", "duration": "E3"}
+    ]
+  }]
+}
 
-**Example 3: Full replacement**
-Context: Measure has any content
-User says: "change measure 1 to triplets"
-
-YOU MUST GENERATE:
-- All 4 beats: 12 notes with duration "E3"
-Result: Replace everything`;
+DO NOT convert context triplets (E3) to regular eighths (E). COPY THE EXACT STRING.`;
       }
 
       const response = await anthropic.beta.messages.create({
