@@ -89,48 +89,40 @@ CRITICAL: When the user asks for "fivelets" or "quintuplets", use duration E5/Q5
         systemPrompt += `\n\n**CURRENT SCORE CONTEXT:**
 ${JSON.stringify(context, null, 2)}
 
-**CRITICAL CONTEXT RULE:**
-When user says "first N beats", you MUST copy the EXACT "duration" field value from context for the remaining beats.
+**CONTEXT MODIFICATION RULES:**
 
-**EXAMPLE - Step by step:**
+1. **EMBELLISHMENT-ONLY MODIFICATIONS** (e.g., "add accents", "add flams", "add diddles"):
+   - COPY EVERY NOTE from context EXACTLY (same duration, sticking)
+   - ONLY add the requested embellishments to appropriate notes
+   - DO NOT change durations! If context has "E3", output MUST have "E3"
+   
+   Example: Context has triplets (E3), user says "add accents"
+   → Output: Same 12 triplet notes (E3) with "X" added to some
 
-CONTEXT shows measure 1 contains:
-{ "duration": "E3", "sticking": "R" }, { "duration": "E3", "sticking": "L" }, ... (12 total, all "E3")
+2. **RHYTHM MODIFICATIONS** (e.g., "change to triplets", "make into sixteenths"):
+   - Generate new rhythm as requested
+   - Preserve measure structure
 
-USER says: "make the first two beats quintuplets"
+3. **PARTIAL BEAT MODIFICATIONS** (e.g., "first two beats into quintuplets"):
+   - Generate new rhythm for specified beats
+   - COPY EXACT durations from context for remaining beats
 
-STEP 1: Calculate beats
-- 4/4 time, first 2 beats = 10 E5 notes
-- Remaining 2 beats from context = 6 notes starting from note index 10
-
-STEP 2: Copy EXACT duration from context for beats 3-4
-- Context notes[10] has duration:"E3" → USE "E3" (NOT "E")
-- Context notes[11] has duration:"E3" → USE "E3" (NOT "E")
-- ... all 6 remaining notes have "E3"
-
-STEP 3: Generate merged JSON:
+**EXAMPLE: Adding accents to triplets**
+Context: 12 notes with "duration": "E3"
+User says: "add accents"
+CORRECT OUTPUT:
 {
-  "measures": [{
-    "notes": [
-      {"sticking": "R", "duration": "E5"},  // beat 1-2: NEW
-      {"sticking": "L", "duration": "E5"},
-      {"sticking": "R", "duration": "E5"},
-      {"sticking": "L", "duration": "E5"},
-      {"sticking": "R", "duration": "E5"},
-      {"sticking": "L", "duration": "E5"},
-      {"sticking": "R", "duration": "E5"},
-      {"sticking": "L", "duration": "E5"},
-      {"sticking": "R", "duration": "E5"},
-      {"sticking": "L", "duration": "E5"},
-      {"sticking": "R", "duration": "E3"},  // beat 3-4: FROM CONTEXT
-      {"sticking": "L", "duration": "E3"},  // ← MUST BE "E3" NOT "E"!
-      {"sticking": "R", "duration": "E3"},
-      {"sticking": "L", "duration": "E3"},
-      {"sticking": "R", "duration": "E3"},
-      {"sticking": "L", "duration": "E3"}
-    ]
-  }]
+  "notes": [
+    {"sticking": "R", "duration": "E3", "embellishments": ["X"]},  // MUST be E3!
+    {"sticking": "L", "duration": "E3"},
+    {"sticking": "R", "duration": "E3"},
+    {"sticking": "L", "duration": "E3", "embellishments": ["X"]},
+    ...  // All 12 notes, all "E3"
+  ]
 }
+
+WRONG (changing rhythm):
+{"sticking": "R", "duration": "E", "embellishments": ["X"]}  // WRONG! Changed E3 to E!
 
 DO NOT convert context triplets (E3) to regular eighths (E). COPY THE EXACT STRING.`;
       }
