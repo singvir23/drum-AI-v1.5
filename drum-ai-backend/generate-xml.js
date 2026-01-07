@@ -11,9 +11,12 @@ const LAMBDA_URL = process.env.AWS_LAMBDA_URL;
 
 router.post("/", async (req, res) => {
   try {
-    // 1. Check for prompt and API key in request body
-    const { prompt, apiKey } = req.body;
+    // 1. Check for prompt, API key, and context in request body
+    const { prompt, apiKey, context } = req.body;
     console.log("DEBUG: Incoming prompt:", prompt);
+    if (context) {
+      console.log("DEBUG: Received context with", context.measures?.length || 0, "measure(s)");
+    }
 
     if (!prompt) {
       console.log("DEBUG: Missing prompt.");
@@ -46,7 +49,7 @@ router.post("/", async (req, res) => {
     try {
       console.log("DEBUG: About to call Claude...");
 
-      const systemPrompt = `You are a professional drum notation generator. You convert natural language descriptions into structured JSON drum notation.
+      let systemPrompt = `You are a professional drum notation generator. You convert natural language descriptions into structured JSON drum notation.
 
 **Viraaj's Drum Notation System:**
 - **Sticking**: R (right hand), L (left hand)
@@ -80,6 +83,25 @@ router.post("/", async (req, res) => {
 ${examplesText}Generate valid JSON matching this format. Ensure each measure adds up to the correct time signature (default 4/4 = 1.0 beats).
 
 CRITICAL: When the user asks for "fivelets" or "quintuplets", use duration E5/Q5/S5 (NOT E3). When they ask for "sevenlets" or "septuplets", use duration E7/Q7/S7 (NOT E3).`;
+
+      // Add context if provided
+      if (context && context.measures && context.measures.length > 0) {
+        systemPrompt += `\n\n**CURRENT SCORE CONTEXT:**\nThe user's score currently contains the following in the target measure(s):\n${JSON.stringify(context, null, 2)}
+
+**CONTEXT-AWARE COMMANDS:**
+When the user says "change", "modify", "replace", or specifies parts like "first two beats" or "last beat", use this context to understand what currently exists and what portion to modify.
+
+For partial measure modifications (e.g., "first two beats"):
+- Generate ONLY the requested portion 
+- The plugin will handle filling the rest of the measure or preserving existing content
+
+Example: If user says "make the first two beats quintuplets" in 4/4 time:
+- Generate 10 notes (2 beats × 5 quintuplets per beat) with duration E5
+- The result will be a partial measure
+
+Example: If user says "change measure 1 to triplets" and measure 1 currently has quarter notes:
+- Replace the entire measure with triplets (12 E3 notes for 4/4 time)`;
+      }
 
       const response = await anthropic.beta.messages.create({
         model: "claude-sonnet-4-5-20250929",
