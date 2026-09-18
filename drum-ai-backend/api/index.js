@@ -37,7 +37,6 @@ async function handleGenerate(req, res) {
 }
 
 app.post("/generate", handleGenerate);
-app.post("/generate-xml", handleGenerate); // legacy path used by plugin v1.x
 
 // Handy for debugging notation by hand: POST { "measure": "RS LS ...", "timeSignature": "4/4" }
 app.post("/validate", (req, res) => {

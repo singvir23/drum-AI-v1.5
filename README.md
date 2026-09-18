@@ -84,7 +84,7 @@ ANTHROPIC_API_KEY=sk-ant-… npm run smoke   # real end-to-end prompts against t
 Point the plugin at a local server via **Settings → Backend URL** (`http://localhost:3001`).
 
 Endpoints: `GET /` health (version + model) · `POST /generate` · `POST /validate`
-(`{ "measure": "RS LS …", "timeSignature": "4/4" }`) · `POST /generate-xml` (alias for old plugins).
+(`{ "measure": "RS LS …", "timeSignature": "4/4" }`).
 
 Environment (Vercel → Settings → Environment Variables, or `.env` locally):
 
