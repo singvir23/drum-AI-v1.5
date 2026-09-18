@@ -1,4 +1,4 @@
-// Turn a request into validated notation: call Claude, validate, give it one chance to fix
+// Turn a request into validated notation: call the model, validate, give it one chance to fix
 // its own mistakes, then repair deterministically whatever is still wrong.
 
 import Anthropic from "@anthropic-ai/sdk";
@@ -15,14 +15,14 @@ export function createClient(apiKey) {
 }
 
 /** Map an SDK error to { status, message } for the HTTP layer. */
-export function describeClaudeError(err) {
+export function describeApiError(err) {
   if (err instanceof RequestError) return { status: err.status, message: err.message };
   if (err instanceof Anthropic.AuthenticationError) return { status: 401, message: "Invalid Anthropic API key." };
   if (err instanceof Anthropic.PermissionDeniedError) return { status: 403, message: "This API key is not allowed to use the model." };
   if (err instanceof Anthropic.RateLimitError) return { status: 429, message: "Anthropic rate limit hit — wait a moment and try again." };
-  if (err instanceof Anthropic.BadRequestError) return { status: 400, message: `Claude rejected the request: ${err.message}` };
-  if (err instanceof Anthropic.APIConnectionTimeoutError) return { status: 504, message: "Claude took too long to answer. Try fewer measures." };
-  if (err instanceof Anthropic.APIError) return { status: 502, message: `Claude API error (${err.status}): ${err.message}` };
+  if (err instanceof Anthropic.BadRequestError) return { status: 400, message: `The model rejected the request: ${err.message}` };
+  if (err instanceof Anthropic.APIConnectionTimeoutError) return { status: 504, message: "The model took too long to answer. Try fewer measures." };
+  if (err instanceof Anthropic.APIError) return { status: 502, message: `Model API error (${err.status}): ${err.message}` };
   return { status: 500, message: err?.message || "Unexpected server error." };
 }
 
@@ -37,7 +37,7 @@ function extractJson(response) {
   try {
     return { text, json: JSON.parse(text) };
   } catch {
-    throw new RequestError("Claude returned malformed JSON. Please try again.", 502);
+    throw new RequestError("The model returned malformed JSON. Please try again.", 502);
   }
 }
 
@@ -82,7 +82,7 @@ export async function generate(body, options = {}) {
   let repairedByModel = false;
 
   if (problems.length > 0) {
-    log(`generate: ${problems.length} invalid measure(s), asking Claude to fix`);
+    log(`generate: ${problems.length} invalid measure(s), asking the model to fix`);
     const second = await client.messages.create({
       ...request,
       messages: [...messages, { role: "assistant", content: text }, { role: "user", content: repairMessage(problems, timeSignature) }],
@@ -122,14 +122,14 @@ export async function generate(body, options = {}) {
   };
 }
 
-/** Coerce Claude's JSON into a safe shape. */
+/** Coerce the model's JSON into a safe shape. */
 function sanitize(json) {
-  if (!json || typeof json !== "object") throw new RequestError("Claude returned an unexpected structure.", 502);
+  if (!json || typeof json !== "object") throw new RequestError("The model returned an unexpected structure.", 502);
   let startMeasure = Number.isInteger(json.startMeasure) ? json.startMeasure : Number.parseInt(json.startMeasure, 10);
   if (!Number.isInteger(startMeasure) || startMeasure < 1) startMeasure = 1;
 
   let measures = Array.isArray(json.measures) ? json.measures.map((m) => (typeof m === "string" ? m.trim() : "")) : [];
-  if (measures.length === 0) throw new RequestError("Claude returned no measures. Try rephrasing the request.", 502);
+  if (measures.length === 0) throw new RequestError("The model returned no measures. Try rephrasing the request.", 502);
   let truncated = false;
   if (measures.length > MAX_MEASURES) {
     measures = measures.slice(0, MAX_MEASURES);

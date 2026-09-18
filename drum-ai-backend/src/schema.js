@@ -1,8 +1,8 @@
-// Structured-output schema for Claude and validation of the plugin's request body.
+// Structured-output schema for the model and validation of the plugin's request body.
 
 import { parseTimeSignature } from "./notation.js";
 
-/** JSON schema handed to Claude via output_config.format. */
+/** JSON schema handed to the model via output_config.format. */
 export const OUTPUT_SCHEMA = {
   type: "object",
   properties: {

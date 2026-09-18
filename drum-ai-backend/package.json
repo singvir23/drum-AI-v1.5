@@ -2,7 +2,7 @@
   "name": "drum-ai-backend",
   "version": "2.0.0",
   "private": true,
-  "description": "Backend for the Drum AI Copilot MuseScore plugin: turns natural language into validated snare notation using Claude.",
+  "description": "Backend for the Drum AI Copilot MuseScore plugin: turns natural language into validated snare notation using an LLM.",
   "type": "module",
   "main": "api/index.js",
   "engines": {

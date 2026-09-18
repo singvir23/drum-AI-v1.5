@@ -7,7 +7,7 @@ import FileIO 3.0
 // Drum AI Copilot — natural-language snare notation inside MuseScore 4.6+.
 //
 // Flow: read the score (time signature, measures as compact tokens, selection)
-//       → POST to the backend → Claude answers with { startMeasure, measures }
+//       → POST to the backend → the model answers with { startMeasure, measures }
 //       → clear the target measures → pass 1 writes notes/rests/tuplets
 //       → pass 2 adds sticking, accents, diddles, ghost notes, flams.
 // Everything happens inside one startCmd()/endCmd(), so Cmd+Z undoes a whole generation.
