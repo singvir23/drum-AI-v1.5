@@ -1,20 +1,21 @@
 {
-  "dependencies": {
-    "@anthropic-ai/sdk": "^0.71.2",
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
-    "express": "^4.21.0",
-    "node-fetch": "^2.7.0",
-    "openai": "^4.61.1",
-    "opensheetmusicdisplay": "^1.8.9",
-    "zod": "^3.25.76"
+  "name": "drum-ai-backend",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Backend for the Drum AI Copilot MuseScore plugin: turns natural language into validated snare notation using Claude.",
+  "type": "module",
+  "main": "api/index.js",
+  "engines": {
+    "node": ">=20"
   },
   "scripts": {
-    "start": "node index.js",
-    "build": "npm install",
-    "test": "echo 'Error: no test specified' && exit 1"
+    "start": "node server.js",
+    "test": "node --test",
+    "smoke": "node scripts/smoke.js"
   },
-  "devDependencies": {
-    "@babel/plugin-proposal-private-property-in-object": "^7.21.11"
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.126.0",
+    "cors": "^2.8.6",
+    "express": "^4.22.3"
   }
 }

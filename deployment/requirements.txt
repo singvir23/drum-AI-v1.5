@@ -1,2 +1,0 @@
-# Python dependencies for AWS Lambda deployment
-# No external dependencies needed - uses standard library only

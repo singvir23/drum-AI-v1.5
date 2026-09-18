@@ -1,24 +1,11 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "index.js",
-      "use": "@vercel/node"
-    },
-    { 
-      "src": "*.py", 
-      "use": "@vercel/python", 
-      "config": { "runtime": "python3.9" } 
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 60
     }
-  ],
-  "routes": [
-    {
-      "src": "/compiler",
-      "dest": "compiler.py"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "index.js"
-    }
+  },
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/api" }
   ]
 }
