@@ -19,15 +19,15 @@ Every generation is validated before it touches the score, and the whole thing i
 ## How it works
 
 ```
-MuseScore plugin (QML)          Vercel backend (Node)              Claude
+MuseScore plugin (QML)          Vercel backend (Node)              Model
 ──────────────────────          ─────────────────────              ──────
 reads score → compact tokens ─► builds prompt + examples ─────────► returns JSON
                                 validates every measure  ◄─────────  { startMeasure,
-writes notes, tuplets,       ◄─ asks Claude to fix, else                measures[] }
+writes notes, tuplets,       ◄─ asks the model to fix, else             measures[] }
 sticking, embellishments        repairs deterministically
 ```
 
-The plugin and backend share one compact notation (below). Claude decides *where* the music
+The plugin and backend share one compact notation (below). The model decides *where* the music
 goes from your prompt and your selection; the backend guarantees every measure adds up.
 
 ## Install
@@ -55,7 +55,7 @@ Requires MuseScore **4.6 or newer** (older 4.x mostly works; ghost-note parenthe
 
 ## Notation
 
-This is the "wire format" between the plugin, the backend and Claude. You never have to type
+This is the "wire format" between the plugin, the backend and the model. You never have to type
 it, but it is what you'll see under *Show details*.
 
 | | |
@@ -104,7 +104,7 @@ drum-ai-backend/
   src/notation.js            token grammar: parse / validate / repair (pure, tested)
   src/prompt.js              system prompt + few-shot examples
   src/schema.js              structured-output schema + request validation
-  src/generate.js            Claude call, validation, one self-repair turn
+  src/generate.js            model call, validation, one self-repair turn
   scripts/smoke.js           end-to-end checks with a real key
   test/                      node:test suites
 ```
@@ -114,16 +114,6 @@ drum-ai-backend/
 The backend deploys to Vercel automatically on every push to `main` (project root directory:
 `drum-ai-backend`). Nothing else is needed — the plugin talks to
 `https://drum-ai-backend.vercel.app` by default.
-
-## Working on this from your phone
-
-Because the backend deploys from GitHub and the plugin is a single file in this repo, the
-whole project can be driven from a Claude session on any device:
-
-1. Ask Claude (Cowork) to change something — a prompt tweak, a new rudiment, a bug fix.
-2. It edits, runs `npm test`, commits and pushes. Vercel redeploys the backend in about a minute.
-3. If the plugin file changed, on the laptop run `git pull` — the symlink from `install.sh`
-   means MuseScore picks it up on the next launch (or **Plugins → Manage plugins → Reload**).
 
 ## License
 

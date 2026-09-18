@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import Anthropic from "@anthropic-ai/sdk";
-import { generate, describeClaudeError } from "../src/generate.js";
+import { generate, describeApiError } from "../src/generate.js";
 import { EXAMPLES, invalidExamples, describeScore, alt, pattern } from "../src/prompt.js";
 import { normalizeRequest, RequestError } from "../src/schema.js";
 import { validateMeasure } from "../src/notation.js";
@@ -162,15 +162,15 @@ test("generate: missing API key is a 401 before any model call", async () => {
   }
 });
 
-test("describeClaudeError maps SDK errors to HTTP statuses", () => {
+test("describeApiError maps SDK errors to HTTP statuses", () => {
   const mk = (Cls, status) => new Cls(status, { error: { message: "m" } }, "m", new Headers());
-  assert.equal(describeClaudeError(mk(Anthropic.AuthenticationError, 401)).status, 401);
-  assert.equal(describeClaudeError(mk(Anthropic.RateLimitError, 429)).status, 429);
-  assert.equal(describeClaudeError(mk(Anthropic.BadRequestError, 400)).status, 400);
-  assert.equal(describeClaudeError(mk(Anthropic.InternalServerError, 500)).status, 502);
-  assert.equal(describeClaudeError(new Anthropic.APIConnectionTimeoutError()).status, 504);
-  assert.equal(describeClaudeError(new RequestError("bad", 422)).status, 422);
-  assert.equal(describeClaudeError(new Error("boom")).status, 500);
+  assert.equal(describeApiError(mk(Anthropic.AuthenticationError, 401)).status, 401);
+  assert.equal(describeApiError(mk(Anthropic.RateLimitError, 429)).status, 429);
+  assert.equal(describeApiError(mk(Anthropic.BadRequestError, 400)).status, 400);
+  assert.equal(describeApiError(mk(Anthropic.InternalServerError, 500)).status, 502);
+  assert.equal(describeApiError(new Anthropic.APIConnectionTimeoutError()).status, 504);
+  assert.equal(describeApiError(new RequestError("bad", 422)).status, 422);
+  assert.equal(describeApiError(new Error("boom")).status, 500);
 });
 
 test("pattern helper spells rudiments correctly", () => {

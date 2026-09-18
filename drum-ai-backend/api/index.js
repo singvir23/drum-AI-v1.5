@@ -4,7 +4,7 @@
 import express from "express";
 import cors from "cors";
 import { createRequire } from "node:module";
-import { generate, describeClaudeError, DEFAULT_MODEL } from "../src/generate.js";
+import { generate, describeApiError, DEFAULT_MODEL } from "../src/generate.js";
 import { validateMeasure, repairMeasure } from "../src/notation.js";
 
 const require = createRequire(import.meta.url);
@@ -29,7 +29,7 @@ async function handleGenerate(req, res) {
     );
     res.json(result);
   } catch (err) {
-    const { status, message } = describeClaudeError(err);
+    const { status, message } = describeApiError(err);
     if (status >= 500) console.error("[generate] failed:", err);
     else console.log(`[generate] ${status}: ${message}`);
     res.status(status).json({ error: message });
